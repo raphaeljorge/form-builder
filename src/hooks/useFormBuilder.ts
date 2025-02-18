@@ -2,27 +2,19 @@ import {
   useForm, 
   useWatch, 
   UseFormReturn, 
-  FormState as RHFFormState,
-  FieldError,
   UseFormSetFocus,
   UseFormGetFieldState,
-  FieldValues,
   useFieldArray,
-  UseFormWatch,
-  Resolver
-} from 'react-hook-form';
+  UseFormWatch} from 'react-hook-form';
 import { 
   FormConfig, 
   FormValues, 
   BaseFormValues,
-  FieldValue,
   ArrayFieldOperations,
   SetValueOptions,
-  WatchOptions,
   EnhancedFormState,
   baseSchema,
   ValidationError,
-  ValidationResult,
   FormResetOptions,
   createValidationSchema
 } from '../types/form';
@@ -58,7 +50,25 @@ export interface FormState {
 const DEFAULT_VALUES: BaseFormValues = {
   phone: '',
   ssn: '',
-  country: ''
+  country: '',
+  state: '',
+  password: '',
+  confirmPassword: ''
+};
+
+// Initialize array fields based on config
+const initializeArrayFields = (config: FormConfig) => {
+  const arrayFields: Record<string, any[]> = {};
+  
+  config.rows.forEach(row => {
+    row.columns.forEach(field => {
+      if (field.type === 'array' || field.type === 'chip') {
+        arrayFields[field.id] = field.type === 'array' ? [''] : [];
+      }
+    });
+  });
+
+  return arrayFields;
 };
 
 // Create validation schema from config
@@ -73,7 +83,7 @@ const buildValidationSchema = (config: FormConfig) => {
   const arrayFields: Record<string, z.ZodTypeAny> = {};
   config.rows.forEach(row => {
     row.columns.forEach(field => {
-      if (field.type === 'array') {
+      if (field.type === 'array' || field.type === 'chip') {
         arrayFields[field.id] = z.array(z.any());
       }
     });
@@ -96,7 +106,7 @@ const buildValidationSchema = (config: FormConfig) => {
         }
 
         // Array field validation
-        if (field.type === 'array') {
+        if (field.type === 'array' || field.type === 'chip') {
           const array = Array.isArray(value) ? value : [];
           if (field.minItems && array.length < field.minItems) {
             addError([field.id], `Minimum ${field.minItems} items required`);
@@ -127,7 +137,7 @@ const buildValidationSchema = (config: FormConfig) => {
 
         // Custom validation
         if (field.validation?.custom) {
-          const result = field.validation.custom(String(value));
+          const result = field.validation.custom(String(value), data);
           if (result !== true) {
             addError([field.id], typeof result === 'string' ? result : 'Invalid value');
           }
@@ -175,14 +185,18 @@ export const useFormBuilder = (
 ): UseFormBuilderReturn => {
   const schema = buildValidationSchema(config);
   
+  // Initialize default values with array fields
+  const initialValues = {
+    ...DEFAULT_VALUES,
+    ...initializeArrayFields(config),
+    ...options.defaultValues
+  };
+
   const methods = useForm<FormValues>({
     mode: options.mode || 'onSubmit',
     reValidateMode: options.reValidateMode || 'onChange',
     resolver: zodResolver(schema),
-    defaultValues: {
-      ...DEFAULT_VALUES,
-      ...options.defaultValues
-    },
+    defaultValues: initialValues,
     shouldUnregister: options.shouldUnregister,
     criteriaMode: options.criteriaMode,
     shouldFocusError: options.shouldFocusError,
@@ -194,8 +208,8 @@ export const useFormBuilder = (
   const arrayFields: Record<string, ArrayFieldOperations> = {};
   config.rows.forEach(row => {
     row.columns.forEach(field => {
-      if (field.type === 'array') {
-        const { fields, append, prepend, remove, swap, move, insert } = useFieldArray({
+      if (field.type === 'array' || field.type === 'chip') {
+        const { append, prepend, remove, swap, move, insert } = useFieldArray({
           control: methods.control,
           name: field.id
         });
@@ -228,7 +242,7 @@ export const useFormBuilder = (
       const rawValue = values[field.id];
       if (field.type === 'text' && field.mask) {
         maskedValues[field.id] = applyMask(rawValue, field.mask);
-      } else if (field.type === 'array') {
+      } else if (field.type === 'array' || field.type === 'chip') {
         maskedValues[field.id] = Array.isArray(rawValue) ? rawValue : [];
       } else {
         maskedValues[field.id] = rawValue || '';

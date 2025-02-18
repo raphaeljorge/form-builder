@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import { EnhancedFormBuilder } from './components/EnhancedFormBuilder';
 import { formConfig } from './config/formConfig';
 import type { RowWrapperProps, FormValues } from './types/form';
@@ -28,6 +28,24 @@ const config = {
     ...row,
     RowWrapper: index === 0 ? PrimaryRowWrapper : SecondaryRowWrapper
   }))
+};
+
+// Initialize default values based on config
+const getDefaultValues = () => {
+  const defaultValues: Partial<FormValues> = {
+    phone: '',
+    ssn: '',
+    country: '',
+    state: '',
+    password: '',
+    confirmPassword: '',
+    skills: [],
+    // Initialize array fields with one empty item
+    emails: [''],
+    addresses: ['']
+  };
+  
+  return defaultValues;
 };
 
 const ArrayFieldControls = () => {
@@ -247,7 +265,6 @@ const FormStateDisplay = () => {
     isSubmitted = false,
     isValidating = false,
     submitCount = 0,
-    touchedFields = {},
     errors = {},
     dirtyFields = {}
   } = formState;
@@ -364,20 +381,29 @@ const FormStateDisplay = () => {
 };
 
 const FormWithQuery = () => {
+  // Memoize default values
+  const defaultValues = useMemo(() => getDefaultValues(), []);
+
   const methods = useFormBuilder(config, {
     mode: 'onChange',
     reValidateMode: 'onBlur',
     criteriaMode: 'all',
     shouldFocusError: true,
-    defaultValues: {
-      phone: '',
-      ssn: '',
-      country: '',
-      emails: [''],
-      addresses: [''],
-      skills: [] // Initialize skills array
-    }
+    defaultValues
   });
+
+  // Initialize array fields if empty
+  React.useEffect(() => {
+    const { emails, addresses } = methods.getValues();
+    
+    if (!emails || emails.length === 0) {
+      methods.setValue('emails', ['']);
+    }
+    
+    if (!addresses || addresses.length === 0) {
+      methods.setValue('addresses', ['']);
+    }
+  }, [methods]);
 
   const mutation = useMutation({
     mutationFn: submitFormData,
@@ -422,7 +448,7 @@ const FormWithQuery = () => {
   return (
     <FormProvider {...methods}>
       <div className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-4xl mx-auto">          
           <EnhancedFormBuilder
             config={config}
             onSubmit={handleSubmit}
