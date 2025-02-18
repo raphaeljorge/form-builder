@@ -2,7 +2,7 @@ import React, { memo } from 'react';
 import { EnhancedFormBuilder } from './components/EnhancedFormBuilder';
 import { formConfig } from './config/formConfig';
 import type { RowWrapperProps, FieldValue } from './types/form';
-import { useForm, useWatch, FormProvider } from 'react-hook-form';
+import { useForm, useWatch, FormProvider, useFormContext } from 'react-hook-form';
 import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
 import { submitFormData, transformFormDataToApi } from './services/api';
 
@@ -32,7 +32,7 @@ const config = {
 type FormState = Record<string, FieldValue>;
 
 const FormStateDisplay = () => {
-  const { control } = useForm();
+  const { control } = useFormContext();
   const formValues = useWatch({ control });
 
   if (!formValues) return null;
@@ -127,13 +127,13 @@ const FormWithQuery = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">
-          Enhanced Form Builder with React Query
-        </h1>
-        
-        <FormProvider {...methods}>
+    <FormProvider {...methods}>
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="max-w-4xl mx-auto">
+          <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">
+            Enhanced Form Builder with React Query
+          </h1>
+          
           <EnhancedFormBuilder
             config={config}
             onSubmit={handleSubmit}
@@ -153,9 +153,9 @@ const FormWithQuery = () => {
           )}
 
           <FormStateDisplay />
-        </FormProvider>
+        </div>
       </div>
-    </div>
+    </FormProvider>
   );
 };
 
