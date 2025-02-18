@@ -2,7 +2,11 @@ import React, { memo } from 'react';
 import { EnhancedFormBuilder } from './components/EnhancedFormBuilder';
 import { formConfig } from './config/formConfig';
 import type { RowWrapperProps, FieldValue } from './types/form';
-import { useForm, useWatch, FormProvider, useFormContext } from 'react-hook-form';
+import { useForm, useWatch, FormProvider } from 'react-hook-form';
+import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
+import { submitFormData } from './services/api';
+
+const queryClient = new QueryClient();
 
 const PrimaryRowWrapper = memo<RowWrapperProps>(({ children, className = '' }) => (
   <div className={`bg-gray-50 p-4 rounded-lg shadow-sm ${className}`}>
@@ -28,7 +32,7 @@ const config = {
 type FormState = Record<string, FieldValue>;
 
 const FormStateDisplay = () => {
-  const { control } = useFormContext();
+  const { control } = useForm();
   const formValues = useWatch({ control });
 
   if (!formValues) return null;
@@ -79,7 +83,7 @@ const FormStateDisplay = () => {
   );
 };
 
-export default function App() {
+const FormWithQuery = () => {
   const methods = useForm<FormState>({
     defaultValues: {
       phone: { masked: '', raw: '' },
@@ -88,27 +92,65 @@ export default function App() {
     }
   });
 
+  const mutation = useMutation({
+    mutationFn: submitFormData,
+    onSuccess: (data) => {
+      console.log('Success:', data);
+      methods.reset();
+    },
+    onError: (error: Error) => {
+      try {
+        const errors = JSON.parse(error.message);
+        Object.entries(errors).forEach(([key, message]) => {
+          methods.setError(key as any, { message: message as string });
+        });
+      } catch {
+        console.error('Error:', error);
+      }
+    }
+  });
+
   const handleSubmit = (data: FormState) => {
-    console.log('Form submitted:', data);
+    mutation.mutate(data);
   };
 
   return (
-    <FormProvider {...methods}>
-      <div className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">
-            Enhanced Form Builder
-          </h1>
-          
+    <div className="min-h-screen bg-gray-50 py-12">
+      <div className="max-w-4xl mx-auto">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8 text-center">
+          Enhanced Form Builder with React Query
+        </h1>
+        
+        <FormProvider {...methods}>
           <EnhancedFormBuilder
             config={config}
             onSubmit={handleSubmit}
             defaultValues={methods.getValues()}
           />
 
+          {mutation.isSuccess && (
+            <div className="mt-4 p-4 bg-green-100 text-green-700 rounded">
+              Form submitted successfully!
+            </div>
+          )}
+
+          {mutation.isError && !methods.formState.errors && (
+            <div className="mt-4 p-4 bg-red-100 text-red-700 rounded">
+              An error occurred while submitting the form.
+            </div>
+          )}
+
           <FormStateDisplay />
-        </div>
+        </FormProvider>
       </div>
-    </FormProvider>
+    </div>
+  );
+};
+
+export default function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <FormWithQuery />
+    </QueryClientProvider>
   );
 }
