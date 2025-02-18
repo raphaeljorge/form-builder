@@ -4,7 +4,7 @@ import { formConfig } from './config/formConfig';
 import type { RowWrapperProps, FieldValue } from './types/form';
 import { useForm, useWatch, FormProvider } from 'react-hook-form';
 import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
-import { submitFormData } from './services/api';
+import { submitFormData, transformFormDataToApi } from './services/api';
 
 const queryClient = new QueryClient();
 
@@ -47,6 +47,9 @@ const FormStateDisplay = () => {
     }
   });
 
+  const apiFormat = transformFormDataToApi(formValues);
+  const hasValues = Object.values(apiFormat).some(value => value !== '');
+
   return (
     <div className="mt-8 p-4 bg-white rounded-lg shadow">
       <h2 className="text-xl font-semibold mb-4">Form State:</h2>
@@ -79,6 +82,15 @@ const FormStateDisplay = () => {
           </pre>
         </div>
       </div>
+
+      {hasValues && (
+        <div className="mt-4">
+          <h3 className="text-lg font-medium mb-2">API Format:</h3>
+          <pre className="bg-gray-100 p-4 rounded">
+            {JSON.stringify(apiFormat, null, 2)}
+          </pre>
+        </div>
+      )}
     </div>
   );
 };
@@ -93,7 +105,7 @@ const FormWithQuery = () => {
   });
 
   const mutation = useMutation({
-    mutationFn: submitFormData,
+    mutationFn: (data: FormState) => submitFormData(transformFormDataToApi(data)),
     onSuccess: (data) => {
       console.log('Success:', data);
       methods.reset();
