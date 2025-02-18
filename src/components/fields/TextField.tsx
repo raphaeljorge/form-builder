@@ -1,4 +1,4 @@
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useState, useEffect } from 'react';
 import type { FieldProps, TextFieldConfig } from '../../types/form';
 import { useDebounce } from '../../hooks/useDebounce';
 
@@ -7,6 +7,8 @@ interface TextFieldProps extends Omit<FieldProps, 'config'> {
 }
 
 const applyMask = (value: string, mask: string): string => {
+  if (!value) return '';
+  
   const rawValue = value.replace(/\D/g, '');
   let result = '';
   let maskIndex = 0;
@@ -27,36 +29,44 @@ const applyMask = (value: string, mask: string): string => {
 
 export const TextField = memo(({ 
   config, 
-  value, 
+  value,
   onChange,
   error 
 }: TextFieldProps) => {
+  const [displayValue, setDisplayValue] = useState('');
+
+  // Update display value when raw value changes
+  useEffect(() => {
+    if (config.mask && value) {
+      setDisplayValue(applyMask(value, config.mask));
+    } else {
+      setDisplayValue(value);
+    }
+  }, [value, config.mask]);
+
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = e.target.value;
-    let maskedValue = inputValue;
-    let rawValue = inputValue.replace(/\D/g, '');
+    let rawValue = inputValue;
     
     if (config.mask) {
+      // Strip non-digits for masked inputs
+      rawValue = inputValue.replace(/\D/g, '');
+      
       // Get the number of digits allowed by the mask
       const maxDigits = config.mask.split('').filter(char => char === '#').length;
       
       // Limit raw value to max digits
       rawValue = rawValue.slice(0, maxDigits);
       
-      // Apply mask
-      maskedValue = applyMask(rawValue, config.mask);
+      // Update display value with mask
+      setDisplayValue(applyMask(rawValue, config.mask));
+    } else {
+      setDisplayValue(inputValue);
     }
     
-    onChange({
-      masked: maskedValue,
-      raw: rawValue
-    });
+    // Always send raw value to form
+    onChange(rawValue);
   }, [config.mask, onChange]);
-
-  // Ensure mask is applied to displayed value
-  const displayValue = config.mask && value.raw 
-    ? applyMask(value.raw, config.mask)
-    : value.masked;
 
   return (
     <div className="w-full">

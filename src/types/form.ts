@@ -49,29 +49,27 @@ export interface FormConfig {
   rows: Row[];
 }
 
-export interface FieldValue {
-  masked: string;
-  raw: string;
-}
-
-export interface FieldProps {
-  config: FieldConfig;
-  value: FieldValue;
-  onChange: (value: FieldValue) => void;
-  error?: string;
-}
-
+// Simple form values interface
 export interface FormValues {
   phone: string;
   ssn: string;
   country: string;
 }
 
-export interface DisplayValues {
+// Internal field value type (used by components)
+export interface FieldValue {
+  masked: string;
+  raw: string;
+}
+
+// Internal display state (managed by components)
+export interface DisplayState {
   [key: string]: FieldValue;
 }
 
-export interface FormData {
-  values: FormValues;
-  display: DisplayValues;
+export interface FieldProps {
+  config: FieldConfig;
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
 }

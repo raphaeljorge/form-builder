@@ -1,4 +1,4 @@
-import React, { memo, useCallback } from 'react';
+import React, { memo } from 'react';
 import type { FieldProps, SelectFieldConfig } from '../../types/form';
 
 interface SelectFieldProps extends Omit<FieldProps, 'config'> {
@@ -7,18 +7,10 @@ interface SelectFieldProps extends Omit<FieldProps, 'config'> {
 
 export const SelectField = memo(({ 
   config, 
-  value, 
+  value,
   onChange,
   error 
 }: SelectFieldProps) => {
-  const handleChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedValue = e.target.value;
-    onChange({
-      masked: selectedValue,
-      raw: selectedValue
-    });
-  }, [onChange]);
-
   return (
     <div className="w-full">
       {config.label && (
@@ -31,8 +23,8 @@ export const SelectField = memo(({
       )}
       <select
         id={config.id}
-        value={value.raw}
-        onChange={handleChange}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         className={`
           w-full px-3 py-2 border rounded-md shadow-sm
           focus:outline-none focus:ring-2 focus:ring-blue-500

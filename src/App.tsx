@@ -1,7 +1,7 @@
 import React, { memo } from 'react';
 import { EnhancedFormBuilder } from './components/EnhancedFormBuilder';
 import { formConfig } from './config/formConfig';
-import type { RowWrapperProps, DisplayValues } from './types/form';
+import type { RowWrapperProps, FormValues } from './types/form';
 import { useForm, useWatch, FormProvider, useFormContext } from 'react-hook-form';
 import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
 import { submitFormData } from './services/api';
@@ -29,20 +29,43 @@ const config = {
   }))
 };
 
-interface FormData {
-  values: {
-    phone: string;
-    ssn: string;
-    country: string;
-  };
-  display: DisplayValues;
-}
+const applyMask = (value: string, mask: string): string => {
+  if (!value) return '';
+  
+  const rawValue = value.replace(/\D/g, '');
+  let result = '';
+  let maskIndex = 0;
+  let valueIndex = 0;
+
+  while (maskIndex < mask.length && valueIndex < rawValue.length) {
+    if (mask[maskIndex] === '#') {
+      result += rawValue[valueIndex];
+      valueIndex++;
+    } else {
+      result += mask[maskIndex];
+    }
+    maskIndex++;
+  }
+
+  return result;
+};
 
 const FormStateDisplay = () => {
-  const { control } = useFormContext<FormData>();
+  const { control } = useFormContext<FormValues>();
   const formValues = useWatch({ control });
 
-  if (!formValues?.values) return null;
+  // Get masked values based on config
+  const maskedValues: Record<string, string> = {};
+  config.rows.forEach(row => {
+    row.columns.forEach(field => {
+      const rawValue = formValues?.[field.id as keyof FormValues] || '';
+      if (field.type === 'text' && field.mask) {
+        maskedValues[field.id] = applyMask(rawValue, field.mask);
+      } else {
+        maskedValues[field.id] = rawValue;
+      }
+    });
+  });
 
   return (
     <div className="mt-8 p-4 bg-white rounded-lg shadow">
@@ -53,26 +76,26 @@ const FormStateDisplay = () => {
         <div className="grid grid-cols-2 gap-4">
           <div className="p-4 bg-gray-100 rounded">
             <p><strong>Phone:</strong></p>
-            <p>Raw: {formValues.values.phone || ''}</p>
-            <p>Masked: {formValues.display?.phone?.masked || ''}</p>
+            <p>Raw: {formValues?.phone || ''}</p>
+            <p>Masked: {maskedValues.phone || ''}</p>
           </div>
           <div className="p-4 bg-gray-100 rounded">
-            <p><strong>Country:</strong> {formValues.values.country || ''}</p>
+            <p><strong>Country:</strong> {formValues?.country || ''}</p>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <h3 className="text-lg font-medium mb-2">Display Values:</h3>
+          <h3 className="text-lg font-medium mb-2">Masked Values:</h3>
           <pre className="bg-gray-100 p-4 rounded">
-            {JSON.stringify(formValues.display, null, 2)}
+            {JSON.stringify(maskedValues, null, 2)}
           </pre>
         </div>
         <div>
-          <h3 className="text-lg font-medium mb-2">API Values:</h3>
+          <h3 className="text-lg font-medium mb-2">Raw Values:</h3>
           <pre className="bg-gray-100 p-4 rounded">
-            {JSON.stringify(formValues.values, null, 2)}
+            {JSON.stringify(formValues, null, 2)}
           </pre>
         </div>
       </div>
@@ -81,19 +104,16 @@ const FormStateDisplay = () => {
 };
 
 const FormWithQuery = () => {
-  const methods = useForm<FormData>({
+  const methods = useForm<FormValues>({
     defaultValues: {
-      values: {
-        phone: '',
-        ssn: '',
-        country: ''
-      },
-      display: {}
+      phone: '',
+      ssn: '',
+      country: ''
     }
   });
 
   const mutation = useMutation({
-    mutationFn: (data: FormData) => submitFormData(data.values),
+    mutationFn: submitFormData,
     onSuccess: (data) => {
       console.log('Success:', data);
       methods.reset();
@@ -102,7 +122,7 @@ const FormWithQuery = () => {
       try {
         const errors = JSON.parse(error.message);
         Object.entries(errors).forEach(([key, message]) => {
-          methods.setError(`values.${key}` as any, { message: message as string });
+          methods.setError(key as keyof FormValues, { message: message as string });
         });
       } catch {
         console.error('Error:', error);
@@ -110,7 +130,7 @@ const FormWithQuery = () => {
     }
   });
 
-  const handleSubmit = (data: FormData) => {
+  const handleSubmit = (data: FormValues) => {
     mutation.mutate(data);
   };
 
@@ -125,7 +145,7 @@ const FormWithQuery = () => {
           <EnhancedFormBuilder
             config={config}
             onSubmit={handleSubmit}
-            defaultValues={methods.getValues().values}
+            defaultValues={methods.getValues()}
           />
 
           {mutation.isSuccess && (
