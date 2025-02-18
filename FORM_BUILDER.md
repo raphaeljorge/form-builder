@@ -1,43 +1,49 @@
-# Enhanced Form Builder Documentation
+# Enhanced Form Builder
 
-A powerful form builder that combines configuration-based form creation with react-hook-form's features and automatic input masking.
+A flexible and performant form builder library with support for various field types, validation, and dynamic form layouts.
 
-## Features
+## Table of Contents
 
-- Configuration-based form creation
-- Built-in input masking
-- Real-time form validation
-- Form state tracking
-- Type-safe implementation
-- React Query integration
-- Advanced form controls
+- [Installation](#installation)
+- [Quick Start](#quick-start)
+- [Field Types](#field-types)
+- [Form Configuration](#form-configuration)
+- [Validation](#validation)
+- [Components](#components)
+- [Examples](#examples)
+- [API Reference](#api-reference)
 
 ## Installation
 
 ```bash
-npm install react-hook-form @hookform/resolvers zod @tanstack/react-query
+npm install @your-org/form-builder
 ```
 
-## Basic Usage
+## Quick Start
 
-```typescript
+```tsx
+import { EnhancedFormBuilder } from './components/form';
+import { FormProvider } from 'react-hook-form';
 import { useFormBuilder } from './hooks/useFormBuilder';
-import { EnhancedFormBuilder } from './components/EnhancedFormBuilder';
 
-// Define your form configuration
-const config = {
+const formConfig = {
   rows: [
     {
       id: 'row1',
       columns: [
         {
-          id: 'phone',
+          id: 'name',
           type: 'text',
-          label: 'Phone',
-          mask: '(###) ###-####',
-          required: true,
+          label: 'Name',
+          required: true
+        },
+        {
+          id: 'email',
+          type: 'text',
+          label: 'Email',
           validation: {
-            pattern: '^\\d{10}$'
+            pattern: '^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$',
+            message: 'Please enter a valid email'
           }
         }
       ]
@@ -45,51 +51,46 @@ const config = {
   ]
 };
 
-// Use the form builder
 const MyForm = () => {
-  const methods = useFormBuilder(config, {
+  const methods = useFormBuilder(formConfig, {
     mode: 'onChange'
   });
 
-  const handleSubmit = (data) => {
+  const onSubmit = (data) => {
     console.log('Form data:', data);
   };
 
   return (
     <FormProvider {...methods}>
       <EnhancedFormBuilder
-        config={config}
-        onSubmit={handleSubmit}
+        config={formConfig}
+        onSubmit={onSubmit}
       />
     </FormProvider>
   );
 };
 ```
 
-## Form Configuration
+## Field Types
 
-### Field Types
-
-1. Text Field:
-```typescript
+### Text Field
+```tsx
 {
   id: 'phone',
   type: 'text',
-  label: 'Phone Number',
+  label: 'Phone',
   placeholder: '(999) 999-9999',
   mask: '(###) ###-####',
   required: true,
   validation: {
-    min: 10,
-    max: 10,
-    pattern: '^\\d{10}$',
-    custom: (value) => value.startsWith('1') || 'Must start with 1'
+    pattern: '^\\(\\d{3}\\) \\d{3}-\\d{4}$',
+    message: 'Please enter a valid phone number'
   }
 }
 ```
 
-2. Select Field:
-```typescript
+### Select Field
+```tsx
 {
   id: 'country',
   type: 'select',
@@ -97,194 +98,340 @@ const MyForm = () => {
   required: true,
   options: [
     { value: 'us', label: 'United States' },
-    { value: 'uk', label: 'United Kingdom' }
-  ]
+    { value: 'uk', label: 'United Kingdom' },
+    { value: 'ca', label: 'Canada' }
+  ],
+  validation: {
+    custom: (value) => value === 'us' || 'Currently only accepting US applications'
+  }
 }
 ```
 
-## Form Builder Options
-
-```typescript
-const methods = useFormBuilder(config, {
-  // When to trigger validation
-  mode: 'onChange' | 'onBlur' | 'onSubmit' | 'onTouched' | 'all',
-  
-  // When to re-validate
-  reValidateMode: 'onChange' | 'onBlur' | 'onSubmit',
-  
-  // Initial form values
-  defaultValues: {
-    phone: '',
-    country: ''
-  },
-  
-  // Remove field values when unmounted
-  shouldUnregister: boolean
-});
-```
-
-## Form State
-
-### Accessing Form State
-
-```typescript
-const { state, formState } = methods;
-
-// Raw and masked values
-console.log(state.raw);     // { phone: "1234567890" }
-console.log(state.masked);  // { phone: "(123) 456-7890" }
-
-// Form status
-console.log(formState.isDirty);      // Form changed
-console.log(formState.isValid);      // All validations pass
-console.log(formState.isSubmitting); // Form submitting
-console.log(formState.errors);       // Validation errors
-```
-
-### Watching Values
-
-```typescript
-const { watch } = methods;
-
-// Watch raw values
-watch('phone');  // "1234567890"
-
-// Watch masked values
-watch.masked('phone');  // "(123) 456-7890"
-
-// Watch multiple fields
-watch.masked(['phone', 'ssn']);
-```
-
-## Form Methods
-
-```typescript
-const {
-  // Reset form to default values
-  reset: () => void,
-  
-  // Set field value
-  setValue: (name: string, value: any, options?: SetValueOptions) => void,
-  
-  // Get current values
-  getValues: () => FormValues,
-  
-  // Trigger validation
-  trigger: (name?: string | string[]) => Promise<boolean>,
-  
-  // Set error manually
-  setError: (name: string, error: FieldError) => void,
-  
-  // Clear form errors
-  clearErrors: (name?: string | string[]) => void
-} = methods;
-```
-
-## Validation
-
-### Field-level Validation
-
-```typescript
+### Chip Field (with Autocomplete)
+```tsx
 {
-  id: 'phone',
-  type: 'text',
+  id: 'skills',
+  type: 'chip',
+  label: 'Skills',
+  placeholder: 'Type to search skills...',
   required: true,
+  options: [
+    'JavaScript',
+    'TypeScript',
+    'React',
+    'Node.js',
+    'Python'
+  ],
+  minItems: 2,
+  maxItems: 5,
   validation: {
-    min: 10,
-    max: 10,
-    pattern: '^\\d{10}$',
-    custom: (value) => {
-      return value.startsWith('1') || 'Must start with 1';
+    message: 'Please select between 2 and 5 skills'
+  }
+}
+```
+
+### Array Field
+```tsx
+{
+  id: 'emails',
+  type: 'array',
+  label: 'Email Addresses',
+  required: true,
+  minItems: 1,
+  maxItems: 3,
+  template: {
+    id: 'email',
+    type: 'text',
+    placeholder: 'Enter email',
+    validation: {
+      pattern: '^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$',
+      message: 'Please enter a valid email'
     }
   }
 }
 ```
 
-### Form-level Validation
+## Form Configuration
 
-The form builder automatically creates a Zod schema based on your field configurations, handling:
-- Required fields
-- Min/max length
-- Pattern matching
-- Custom validation
-- Mask validation
-
-## Error Handling
-
-```typescript
-// Access errors
-const { formState: { errors } } = methods;
-
-// Set errors manually
-methods.setError('phone', {
-  type: 'manual',
-  message: 'Invalid phone number'
-});
-
-// Clear errors
-methods.clearErrors('phone');
+### Row Configuration
+```tsx
+{
+  rows: [
+    {
+      id: 'row1',
+      wrapperProps: {
+        className: 'bg-gray-50 p-4'
+      },
+      columns: [
+        // field configs
+      ]
+    }
+  ]
+}
 ```
 
-## React Query Integration
+### Custom Row Wrapper
+```tsx
+const CustomRowWrapper = memo<RowWrapperProps>(({ children, className = '' }) => (
+  <div className={`custom-row ${className}`}>
+    {children}
+  </div>
+));
 
-```typescript
-const mutation = useMutation({
-  mutationFn: submitFormData,
-  onSuccess: (data) => {
-    console.log('Success:', data);
-    methods.reset();
-  },
-  onError: (error) => {
-    // Handle API errors
-    const errors = JSON.parse(error.message);
-    Object.entries(errors).forEach(([key, message]) => {
-      methods.setError(key, { message });
-    });
+// Usage
+<EnhancedFormBuilder
+  config={formConfig}
+  onSubmit={onSubmit}
+  RowWrapper={CustomRowWrapper}
+/>
+```
+
+## Validation
+
+### Basic Validation
+```tsx
+{
+  required: true,
+  validation: {
+    pattern: '^[A-Z][a-z]*$',
+    message: 'Must start with capital letter'
+  }
+}
+```
+
+### Custom Validation
+```tsx
+{
+  validation: {
+    custom: (value) => {
+      if (value.length < 3) return 'Must be at least 3 characters';
+      return true;
+    }
+  }
+}
+```
+
+### Cross-field Validation
+```tsx
+{
+  validation: {
+    deps: ['password'],
+    custom: (value, formValues) => {
+      return value === formValues.password || 'Passwords must match';
+    }
+  }
+}
+```
+
+## Components
+
+### Form Provider Setup
+```tsx
+const methods = useFormBuilder(config, {
+  mode: 'onChange',
+  reValidateMode: 'onBlur',
+  criteriaMode: 'all',
+  shouldFocusError: true,
+  defaultValues: {
+    name: '',
+    email: '',
+    skills: []
   }
 });
+
+return (
+  <FormProvider {...methods}>
+    <EnhancedFormBuilder
+      config={config}
+      onSubmit={handleSubmit}
+    />
+  </FormProvider>
+);
 ```
 
-## Best Practices
+### Form State Management
+```tsx
+const { state, formState } = methods;
+const { raw, masked } = state;
+const { 
+  isDirty,
+  isValid,
+  isSubmitting,
+  errors
+} = formState;
+```
 
-1. Form Configuration:
-   - Use meaningful field IDs
-   - Provide clear labels and placeholders
-   - Define appropriate validation rules
-   - Group related fields in rows
+### Array Field Operations
+```tsx
+const { arrayFields } = methods;
 
-2. Validation:
-   - Use appropriate validation modes
-   - Implement field-level validation
-   - Handle API validation errors
-   - Provide clear error messages
+// Add item
+arrayFields.emails?.append('');
 
-3. Performance:
-   - Use appropriate revalidation modes
-   - Implement debouncing where needed
-   - Watch only necessary fields
-   - Use shouldUnregister appropriately
+// Remove item
+arrayFields.emails?.remove(0);
 
-4. Error Handling:
-   - Handle API errors properly
-   - Display validation errors clearly
-   - Clear errors appropriately
-   - Provide user feedback
-
-## TypeScript Support
-
-The form builder is fully typed, providing:
-- Type-safe form configuration
-- Type-safe form values
-- Type-safe validation
-- Type-safe error handling
+// Move item
+arrayFields.emails?.move(0, 1);
+```
 
 ## Examples
 
-Check `src/App.tsx` for a complete example showing:
-- Form configuration
-- Validation setup
-- Error handling
-- Form state display
-- React Query integration
-- Real-time updates
-- Form state tracking
+### Complete Form Example
+```tsx
+const formConfig = {
+  rows: [
+    {
+      id: 'personal',
+      columns: [
+        {
+          id: 'name',
+          type: 'text',
+          label: 'Full Name',
+          required: true,
+          validation: {
+            pattern: '^[A-Za-z\\s]{2,}$',
+            message: 'Please enter a valid name'
+          }
+        },
+        {
+          id: 'email',
+          type: 'text',
+          label: 'Email',
+          required: true,
+          validation: {
+            pattern: '^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$',
+            message: 'Please enter a valid email'
+          }
+        }
+      ]
+    },
+    {
+      id: 'skills',
+      columns: [
+        {
+          id: 'technologies',
+          type: 'chip',
+          label: 'Technologies',
+          required: true,
+          options: ['React', 'Vue', 'Angular', 'Node.js'],
+          minItems: 1,
+          maxItems: 3
+        }
+      ]
+    },
+    {
+      id: 'contacts',
+      columns: [
+        {
+          id: 'phoneNumbers',
+          type: 'array',
+          label: 'Phone Numbers',
+          minItems: 1,
+          template: {
+            id: 'phone',
+            type: 'text',
+            mask: '(###) ###-####',
+            validation: {
+              pattern: '^\\(\\d{3}\\) \\d{3}-\\d{4}$',
+              message: 'Invalid phone number'
+            }
+          }
+        }
+      ]
+    }
+  ]
+};
+
+const MyForm = () => {
+  const methods = useFormBuilder(formConfig, {
+    mode: 'onChange',
+    defaultValues: {
+      name: '',
+      email: '',
+      technologies: [],
+      phoneNumbers: ['']
+    }
+  });
+
+  const onSubmit = async (data: FormValues) => {
+    try {
+      await submitToAPI(data);
+      methods.reset();
+    } catch (error) {
+      console.error('Submission failed:', error);
+    }
+  };
+
+  return (
+    <FormProvider {...methods}>
+      <EnhancedFormBuilder
+        config={formConfig}
+        onSubmit={onSubmit}
+      />
+    </FormProvider>
+  );
+};
+```
+
+## API Reference
+
+### useFormBuilder Options
+```typescript
+interface UseFormBuilderOptions {
+  mode?: 'onSubmit' | 'onChange' | 'onBlur' | 'onTouched' | 'all';
+  reValidateMode?: 'onSubmit' | 'onChange' | 'onBlur';
+  defaultValues?: Partial<FormValues>;
+  shouldUnregister?: boolean;
+  criteriaMode?: 'firstError' | 'all';
+  shouldFocusError?: boolean;
+}
+```
+
+### Field Configuration
+```typescript
+interface BaseFieldConfig {
+  id: string;
+  type: 'text' | 'select' | 'array' | 'chip';
+  label?: string;
+  placeholder?: string;
+  mask?: string;
+  required?: boolean;
+  validation?: ValidationConfig;
+  shouldUnregister?: boolean;
+  defaultValue?: any;
+}
+
+interface ValidationConfig {
+  min?: number;
+  max?: number;
+  pattern?: string;
+  custom?: (value: string) => boolean | string;
+  required?: boolean;
+  deps?: string[];
+  message?: string;
+}
+```
+
+### Form State
+```typescript
+interface FormState {
+  raw: FormValues;
+  masked: Record<string, string | any[]>;
+}
+
+interface EnhancedFormState {
+  isDirty: boolean;
+  dirtyFields: Record<string, boolean>;
+  isSubmitted: boolean;
+  isSubmitSuccessful: boolean;
+  isSubmitting: boolean;
+  isValidating: boolean;
+  submitCount: number;
+  touchedFields: Record<string, boolean>;
+  errors: Record<string, FieldError>;
+  isValid: boolean;
+}
+```
+
+For more detailed information about specific components or features, please refer to the source code or create an issue in the repository.
