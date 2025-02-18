@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { ChipFieldConfig } from '../../types/form';
 
 interface ChipFieldProps {
@@ -8,68 +8,68 @@ interface ChipFieldProps {
   error?: string;
 }
 
-export const ChipField: React.FC<ChipFieldProps> = ({
+export const ChipField = React.memo<ChipFieldProps>(({
   config,
   value = [],
   onChange,
   error
 }) => {
   const [inputValue, setInputValue] = useState('');
-  const [suggestions, setSuggestions] = useState<string[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [highlightedIndex, setHighlightedIndex] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const suggestionsRef = useRef<HTMLDivElement>(null);
 
-  // Filter suggestions based on input
-  useEffect(() => {
-    if (!inputValue.trim()) {
-      setSuggestions([]);
-      setHighlightedIndex(-1);
-      return;
-    }
-
-    const filtered = config.options.filter(
-      (option: string) => 
-        option.toLowerCase().includes(inputValue.toLowerCase()) &&
+  // Memoize filtered suggestions
+  const suggestions = useMemo(() => {
+    if (!inputValue.trim()) return [];
+    
+    const searchTerm = inputValue.toLowerCase();
+    return config.options.filter(
+      option => 
+        option.toLowerCase().includes(searchTerm) &&
         !value.includes(option)
     );
-    setSuggestions(filtered);
-    setIsOpen(filtered.length > 0);
-    setHighlightedIndex(-1);
   }, [inputValue, config.options, value]);
 
-  // Handle click outside to close suggestions
+  // Update dropdown state when suggestions change
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        suggestionsRef.current &&
-        !suggestionsRef.current.contains(event.target as Node) &&
-        !inputRef.current?.contains(event.target as Node)
-      ) {
-        setIsOpen(false);
-      }
-    };
+    setIsOpen(suggestions.length > 0);
+    setHighlightedIndex(-1);
+  }, [suggestions]);
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+  // Memoize click outside handler
+  const handleClickOutside = useCallback((event: MouseEvent) => {
+    if (
+      suggestionsRef.current &&
+      !suggestionsRef.current.contains(event.target as Node) &&
+      !inputRef.current?.contains(event.target as Node)
+    ) {
+      setIsOpen(false);
+    }
   }, []);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setInputValue(e.target.value);
-  };
+  // Setup click outside listener
+  useEffect(() => {
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [handleClickOutside]);
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  // Memoize input change handler
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    setInputValue(e.target.value);
+  }, []);
+
+  // Memoize key down handler
+  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Backspace' && !inputValue && value.length > 0) {
-      // Remove last chip when backspace is pressed on empty input
-      const newValue = value.slice(0, -1);
-      onChange(newValue);
+      onChange(value.slice(0, -1));
       return;
     }
 
     if (e.key === 'ArrowDown' && suggestions.length > 0) {
       e.preventDefault();
-      setHighlightedIndex((prev) => 
+      setHighlightedIndex(prev => 
         prev < suggestions.length - 1 ? prev + 1 : prev
       );
       return;
@@ -77,13 +77,20 @@ export const ChipField: React.FC<ChipFieldProps> = ({
 
     if (e.key === 'ArrowUp' && suggestions.length > 0) {
       e.preventDefault();
-      setHighlightedIndex((prev) => (prev > 0 ? prev - 1 : prev));
+      setHighlightedIndex(prev => prev > 0 ? prev - 1 : prev);
       return;
     }
 
     if (e.key === 'Enter' && highlightedIndex >= 0) {
       e.preventDefault();
-      addChip(suggestions[highlightedIndex]);
+      const newChip = suggestions[highlightedIndex];
+      if (!value.includes(newChip) && (!config.maxItems || value.length < config.maxItems)) {
+        onChange([...value, newChip]);
+        setInputValue('');
+        setIsOpen(false);
+        setHighlightedIndex(-1);
+        inputRef.current?.focus();
+      }
       return;
     }
 
@@ -91,9 +98,10 @@ export const ChipField: React.FC<ChipFieldProps> = ({
       setIsOpen(false);
       setHighlightedIndex(-1);
     }
-  };
+  }, [inputValue, value, suggestions, highlightedIndex, config.maxItems, onChange]);
 
-  const addChip = (chip: string) => {
+  // Memoize add chip handler
+  const addChip = useCallback((chip: string) => {
     if (!value.includes(chip) && (!config.maxItems || value.length < config.maxItems)) {
       onChange([...value, chip]);
       setInputValue('');
@@ -101,13 +109,23 @@ export const ChipField: React.FC<ChipFieldProps> = ({
       setHighlightedIndex(-1);
       inputRef.current?.focus();
     }
-  };
+  }, [value, config.maxItems, onChange]);
 
-  const removeChip = (chipToRemove: string) => {
+  // Memoize remove chip handler
+  const removeChip = useCallback((chipToRemove: string) => {
     onChange(value.filter(chip => chip !== chipToRemove));
-  };
+  }, [value, onChange]);
 
-  const fieldLabel = config.label || 'items';
+  // Memoize computed values
+  const fieldLabel = useMemo(() => config.label || 'items', [config.label]);
+  const isMaxItemsReached = useMemo(() => 
+    config.maxItems ? value.length >= config.maxItems : false,
+    [config.maxItems, value.length]
+  );
+  const showMinItemsMessage = useMemo(() => 
+    config.minItems && value.length < config.minItems,
+    [config.minItems, value.length]
+  );
 
   return (
     <div className="w-full">
@@ -124,11 +142,11 @@ export const ChipField: React.FC<ChipFieldProps> = ({
             className={`w-full px-3 py-2 border rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
               error ? 'border-red-500' : 'border-gray-300'
             }`}
-            placeholder={value.length < (config.maxItems || Infinity) ? config.placeholder : ''}
+            placeholder={!isMaxItemsReached ? config.placeholder : ''}
             value={inputValue}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            disabled={value.length >= (config.maxItems || Infinity)}
+            disabled={isMaxItemsReached}
           />
           {/* Suggestions dropdown */}
           {isOpen && suggestions.length > 0 && (
@@ -179,12 +197,12 @@ export const ChipField: React.FC<ChipFieldProps> = ({
         {error && (
           <p className="mt-1 text-sm text-red-600">{error}</p>
         )}
-        {config.minItems && value.length < config.minItems && (
+        {showMinItemsMessage && (
           <p className="mt-1 text-sm text-gray-500">
             Please select at least {config.minItems} {fieldLabel.toLowerCase()}
           </p>
         )}
-        {config.maxItems && value.length >= config.maxItems && (
+        {isMaxItemsReached && (
           <p className="mt-1 text-sm text-gray-500">
             Maximum {config.maxItems} {fieldLabel.toLowerCase()} reached
           </p>
@@ -192,4 +210,6 @@ export const ChipField: React.FC<ChipFieldProps> = ({
       </div>
     </div>
   );
-};
+});
+
+ChipField.displayName = 'ChipField';
