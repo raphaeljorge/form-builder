@@ -6,10 +6,12 @@ import type {
   RowWrapperProps, 
   TextFieldConfig, 
   SelectFieldConfig,
+  ArrayFieldConfig,
   FormValues
 } from '../types/form';
 import { TextField } from './fields/TextField';
 import { SelectField } from './fields/SelectField';
+import { ArrayField } from './fields/ArrayField';
 
 const DefaultRowWrapper = memo<RowWrapperProps>(({ children, className = '' }) => (
   <div className={`flex flex-wrap gap-4 mb-4 ${className}`}>{children}</div>
@@ -29,6 +31,11 @@ interface FormFieldProps {
   config: FormConfig;
 }
 
+// Type guards
+const isTextField = (field: FieldConfig): field is TextFieldConfig => field.type === 'text';
+const isSelectField = (field: FieldConfig): field is SelectFieldConfig => field.type === 'select';
+const isArrayField = (field: FieldConfig): field is ArrayFieldConfig => field.type === 'array';
+
 const FormField = memo<FormFieldProps>(({ 
   field, 
   config 
@@ -38,24 +45,48 @@ const FormField = memo<FormFieldProps>(({
   return (
     <div className="flex-1 min-w-[200px]">
       <Controller
-        name={field.id as keyof FormValues}
+        name={`${field.id}`}
         control={control}
         render={({ field: { onChange, value }, fieldState: { error } }) => {
-          const commonProps = {
-            value: value || '',
-            onChange,
-            error: error?.message,
-          };
+          const errorMessage = error?.message;
 
-          switch (field.type) {
-            case 'text':
-              return <TextField config={field as TextFieldConfig} {...commonProps} />;
-            case 'select':
-              return <SelectField config={field as SelectFieldConfig} {...commonProps} />;
-            default:
-              const _exhaustiveCheck: never = field;
-              throw new Error(`Unsupported field type: ${(field as any).type}`);
+          if (isTextField(field)) {
+            return (
+              <TextField
+                config={field}
+                value={value?.toString() || ''}
+                onChange={onChange}
+                error={errorMessage}
+              />
+            );
           }
+
+          if (isSelectField(field)) {
+            return (
+              <SelectField
+                config={field}
+                value={value?.toString() || ''}
+                onChange={onChange}
+                error={errorMessage}
+              />
+            );
+          }
+
+          if (isArrayField(field)) {
+            return (
+              <ArrayField
+                config={field}
+                value={Array.isArray(value) ? value : []}
+                onChange={onChange}
+                error={errorMessage}
+              />
+            );
+          }
+
+          // At this point, field should be never type
+          // But we'll handle it explicitly for type safety
+          const unknownField = field as { type: string };
+          throw new Error(`Unsupported field type: ${unknownField.type}`);
         }}
       />
     </div>

@@ -5,7 +5,7 @@ import type { RowWrapperProps, FormValues } from './types/form';
 import { FormProvider, useFormContext } from 'react-hook-form';
 import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
 import { submitFormData } from './services/api';
-import { useFormBuilder, UseFormBuilderReturn, FormResetOptions } from './hooks/useFormBuilder';
+import { useFormBuilder, UseFormBuilderReturn } from './hooks/useFormBuilder';
 
 const queryClient = new QueryClient();
 
@@ -30,6 +30,73 @@ const config = {
   }))
 };
 
+const ArrayFieldControls = () => {
+  const methods = useFormContext() as UseFormBuilderReturn;
+  const { arrayFields } = methods;
+
+  return (
+    <div className="mt-6 p-4 bg-white rounded-lg shadow">
+      <h2 className="text-xl font-semibold mb-4">Array Field Controls</h2>
+      
+      {/* Email Array Controls */}
+      <div className="mb-6">
+        <h3 className="text-lg font-medium mb-2">Email Addresses:</h3>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => arrayFields.emails?.append('')}
+            className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+          >
+            Add Email
+          </button>
+          <button
+            type="button"
+            onClick={() => arrayFields.emails?.remove(0)}
+            className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200"
+          >
+            Remove First
+          </button>
+          <button
+            type="button"
+            onClick={() => arrayFields.emails?.move(0, -1)}
+            className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200"
+          >
+            Move Up
+          </button>
+        </div>
+      </div>
+
+      {/* Address Array Controls */}
+      <div>
+        <h3 className="text-lg font-medium mb-2">Addresses:</h3>
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => arrayFields.addresses?.append('')}
+            className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+          >
+            Add Address
+          </button>
+          <button
+            type="button"
+            onClick={() => arrayFields.addresses?.remove(0)}
+            className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200"
+          >
+            Remove First
+          </button>
+          <button
+            type="button"
+            onClick={() => arrayFields.addresses?.move(0, -1)}
+            className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200"
+          >
+            Move Up
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const FormControls = () => {
   const methods = useFormContext() as UseFormBuilderReturn;
   const { resetForm, setFieldFocus, validateField, getFieldState } = methods;
@@ -37,10 +104,11 @@ const FormControls = () => {
   // Example of field state tracking
   const phoneState = getFieldState('phone');
   const ssnState = getFieldState('ssn');
+  const countryState = getFieldState('country');
 
   // Reset options examples
-  const resetOptions: Record<string, FormResetOptions | null> = {
-    'Complete Reset': null,
+  const resetOptions = {
+    'Complete Reset': undefined,
     'Keep Errors': { keepErrors: true },
     'Keep Values': { keepValues: true },
     'Keep Touched': { keepTouched: true },
@@ -103,6 +171,13 @@ const FormControls = () => {
             >
               Validate SSN
             </button>
+            <button
+              type="button"
+              onClick={() => validateField('country')}
+              className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200"
+            >
+              Validate Country
+            </button>
           </div>
         </div>
 
@@ -114,15 +189,7 @@ const FormControls = () => {
               <button
                 key={label}
                 type="button"
-                onClick={() => {
-                  resetForm(options || undefined);
-                  // Force re-render to ensure state is updated
-                  setTimeout(() => {
-                    methods.setValue('phone', '', { shouldDirty: false });
-                    methods.setValue('ssn', '', { shouldDirty: false });
-                    methods.setValue('country', '', { shouldDirty: false });
-                  }, 0);
-                }}
+                onClick={() => resetForm(options)}
                 className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
               >
                 Reset ({label})
@@ -134,7 +201,7 @@ const FormControls = () => {
         {/* Field State Display */}
         <div>
           <h3 className="text-lg font-medium mb-2">Field States:</h3>
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="p-3 bg-gray-50 rounded">
               <h4 className="font-medium mb-2">Phone Field:</h4>
               <div className="space-y-1 text-sm">
@@ -149,6 +216,14 @@ const FormControls = () => {
                 <p>Touched: {ssnState.isTouched ? 'Yes' : 'No'}</p>
                 <p>Dirty: {ssnState.isDirty ? 'Yes' : 'No'}</p>
                 <p>Error: {ssnState.error ? ssnState.error.message : 'None'}</p>
+              </div>
+            </div>
+            <div className="p-3 bg-gray-50 rounded">
+              <h4 className="font-medium mb-2">Country Field:</h4>
+              <div className="space-y-1 text-sm">
+                <p>Touched: {countryState.isTouched ? 'Yes' : 'No'}</p>
+                <p>Dirty: {countryState.isDirty ? 'Yes' : 'No'}</p>
+                <p>Error: {countryState.error ? countryState.error.message : 'None'}</p>
               </div>
             </div>
           </div>
@@ -168,6 +243,10 @@ const FormStateDisplay = () => {
     isDirty = false,
     isValid = false,
     isSubmitting = false,
+    isSubmitSuccessful = false,
+    isSubmitted = false,
+    isValidating = false,
+    submitCount = 0,
     touchedFields = {},
     errors = {},
     dirtyFields = {}
@@ -239,6 +318,28 @@ const FormStateDisplay = () => {
                   {isSubmitting ? 'Yes - Form is being submitted' : 'No - Form is not submitting'}
                 </span>
               </p>
+              <p>
+                <span className="font-medium">Is Submitted:</span>
+                <span className={`ml-2 ${isSubmitted ? 'text-green-600' : 'text-gray-600'}`}>
+                  {isSubmitted ? 'Yes' : 'No'}
+                </span>
+              </p>
+              <p>
+                <span className="font-medium">Submit Success:</span>
+                <span className={`ml-2 ${isSubmitSuccessful ? 'text-green-600' : 'text-gray-600'}`}>
+                  {isSubmitSuccessful ? 'Yes' : 'No'}
+                </span>
+              </p>
+              <p>
+                <span className="font-medium">Is Validating:</span>
+                <span className={`ml-2 ${isValidating ? 'text-yellow-600' : 'text-green-600'}`}>
+                  {isValidating ? 'Yes' : 'No'}
+                </span>
+              </p>
+              <p>
+                <span className="font-medium">Submit Count:</span>
+                <span className="ml-2">{submitCount}</span>
+              </p>
             </div>
           </div>
           <div>
@@ -271,7 +372,9 @@ const FormWithQuery = () => {
     defaultValues: {
       phone: '',
       ssn: '',
-      country: ''
+      country: '',
+      emails: [''],
+      addresses: ['']
     }
   });
 
@@ -283,9 +386,20 @@ const FormWithQuery = () => {
     },
     onError: (error: Error) => {
       try {
-        const errors = JSON.parse(error.message);
+        const errors = JSON.parse(error.message) as Record<string, string>;
         Object.entries(errors).forEach(([key, message]) => {
-          methods.setError(key as keyof FormValues, { message: message as string });
+          // Handle each field type explicitly
+          switch (key) {
+            case 'phone':
+            case 'ssn':
+            case 'country':
+            case 'emails':
+            case 'addresses':
+              methods.setError(key, { message });
+              break;
+            default:
+              console.warn(`Unknown field: ${key}`);
+          }
         });
       } catch {
         console.error('Error:', error);
@@ -323,6 +437,7 @@ const FormWithQuery = () => {
           )}
 
           <FormControls />
+          <ArrayFieldControls />
           <FormStateDisplay />
         </div>
       </div>

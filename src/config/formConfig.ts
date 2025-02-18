@@ -16,7 +16,8 @@ export const formConfig: FormConfig = {
           mask: '(###) ###-####',
           required: true,
           validation: {
-            pattern: '^\\(\\d{3}\\) \\d{3}-\\d{4}$'
+            pattern: '^\\(\\d{3}\\) \\d{3}-\\d{4}$',
+            message: 'Please enter a valid phone number'
           }
         },
         {
@@ -27,7 +28,8 @@ export const formConfig: FormConfig = {
           mask: '###-##-####',
           required: true,
           validation: {
-            pattern: '^\\d{3}-\\d{2}-\\d{4}$'
+            pattern: '^\\d{3}-\\d{2}-\\d{4}$',
+            message: 'Please enter a valid SSN'
           }
         }
       ],
@@ -48,8 +50,64 @@ export const formConfig: FormConfig = {
             { value: 'uk', label: 'United Kingdom' },
             { value: 'ca', label: 'Canada' },
           ],
+          validation: {
+            custom: (value) => {
+              // Example of custom validation
+              return value === 'us' || 'Currently only accepting US applications';
+            }
+          }
         },
       ],
     },
+    {
+      id: 'row3',
+      wrapperProps: {
+        className: 'mb-4'
+      },
+      columns: [
+        {
+          id: 'emails',
+          type: 'array',
+          label: 'Email Addresses',
+          required: true,
+          minItems: 1,
+          maxItems: 3,
+          template: {
+            id: 'email',
+            type: 'text',
+            placeholder: 'Enter email',
+            validation: {
+              pattern: '^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$',
+              message: 'Please enter a valid email'
+            }
+          }
+        }
+      ]
+    },
+    {
+      id: 'row4',
+      wrapperProps: {
+        className: 'mb-4'
+      },
+      columns: [
+        {
+          id: 'addresses',
+          type: 'array',
+          label: 'Addresses',
+          minItems: 1,
+          maxItems: 2,
+          template: {
+            id: 'address',
+            type: 'text',
+            placeholder: 'Enter address',
+            validation: {
+              custom: (value) => {
+                return value.length >= 10 || 'Address must be at least 10 characters';
+              }
+            }
+          }
+        }
+      ]
+    }
   ],
 };

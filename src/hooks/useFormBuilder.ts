@@ -6,14 +6,31 @@ import {
   FieldError,
   UseFormSetFocus,
   UseFormGetFieldState,
-  FieldValues
+  FieldValues,
+  useFieldArray,
+  UseFormWatch,
+  Resolver
 } from 'react-hook-form';
-import { FormConfig, FormValues } from '../types/form';
+import { 
+  FormConfig, 
+  FormValues, 
+  BaseFormValues,
+  FieldValue,
+  ArrayFieldOperations,
+  SetValueOptions,
+  WatchOptions,
+  EnhancedFormState,
+  baseSchema,
+  ValidationError,
+  ValidationResult,
+  FormResetOptions,
+  createValidationSchema
+} from '../types/form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 
-const applyMask = (value: string, mask: string): string => {
-  if (!value) return '';
+const applyMask = (value: string | any[] | undefined, mask?: string): string => {
+  if (!value || !mask || Array.isArray(value)) return '';
   
   const rawValue = value.replace(/\D/g, '');
   let result = '';
@@ -35,71 +52,95 @@ const applyMask = (value: string, mask: string): string => {
 
 export interface FormState {
   raw: FormValues;
-  masked: Record<string, string>;
+  masked: Record<string, string | any[]>;
 }
 
-const DEFAULT_VALUES: FormValues = {
+const DEFAULT_VALUES: BaseFormValues = {
   phone: '',
   ssn: '',
   country: ''
 };
 
 // Create validation schema from config
-const createValidationSchema = (config: FormConfig) => {
-  const schema = z.object({
-    phone: z.string(),
-    ssn: z.string(),
-    country: z.string()
+const buildValidationSchema = (config: FormConfig) => {
+  const errors: ValidationError[] = [];
+  
+  const addError = (path: string[], message: string) => {
+    errors.push({ path, message });
+  };
+
+  // Create array fields schema
+  const arrayFields: Record<string, z.ZodTypeAny> = {};
+  config.rows.forEach(row => {
+    row.columns.forEach(field => {
+      if (field.type === 'array') {
+        arrayFields[field.id] = z.array(z.any());
+      }
+    });
   });
 
+  // Create schema with validation
+  const schema = createValidationSchema(baseSchema, arrayFields);
+
   return schema.superRefine((data, ctx) => {
+    errors.length = 0;
+
     config.rows.forEach(row => {
       row.columns.forEach(field => {
-        const id = field.id as keyof FormValues;
-        const value = data[id];
+        const value = data[field.id as keyof typeof data];
 
-        // Skip empty non-required fields
-        if (!value && !field.required) {
-          return;
-        }
-
-        // Check required fields
+        // Required field validation
         if (field.required && !value) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'This field is required',
-            path: [id]
-          });
+          addError([field.id], field.validation?.message || 'This field is required');
           return;
         }
 
-        // For masked fields, only validate digit count
+        // Array field validation
+        if (field.type === 'array') {
+          const array = Array.isArray(value) ? value : [];
+          if (field.minItems && array.length < field.minItems) {
+            addError([field.id], `Minimum ${field.minItems} items required`);
+          }
+          if (field.maxItems && array.length > field.maxItems) {
+            addError([field.id], `Maximum ${field.maxItems} items allowed`);
+          }
+          return;
+        }
+
+        // Masked field validation
         if (field.type === 'text' && field.mask) {
           const digitCount = field.mask.split('').filter(char => char === '#').length;
-          const rawValue = value.replace(/\D/g, '');
-          
-          // Only validate if there's a value and it doesn't match the expected length
+          const rawValue = String(value).replace(/\D/g, '');
           if (rawValue.length > 0 && rawValue.length !== digitCount) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              message: `Must be ${digitCount} digits`,
-              path: [id]
-            });
+            addError([field.id], field.validation?.message || `Must be ${digitCount} digits`);
             return;
           }
         }
 
-        // Only apply pattern validation for non-masked fields
+        // Pattern validation
         if (field.validation?.pattern && !field.mask) {
           const pattern = new RegExp(field.validation.pattern);
-          if (!pattern.test(value)) {
-            ctx.addIssue({
-              code: z.ZodIssueCode.custom,
-              message: 'Invalid format',
-              path: [id]
-            });
+          if (!pattern.test(String(value))) {
+            addError([field.id], field.validation.message || 'Invalid format');
           }
         }
+
+        // Custom validation
+        if (field.validation?.custom) {
+          const result = field.validation.custom(String(value));
+          if (result !== true) {
+            addError([field.id], typeof result === 'string' ? result : 'Invalid value');
+          }
+        }
+      });
+    });
+
+    // Add errors to context
+    errors.forEach(error => {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: error.message,
+        path: error.path
       });
     });
   });
@@ -113,69 +154,84 @@ export interface UseFormBuilderOptions {
   criteriaMode?: 'firstError' | 'all';
   shouldFocusError?: boolean;
   delayError?: number;
+  context?: any;
 }
 
-export interface FormResetOptions {
-  keepErrors?: boolean;
-  keepDirty?: boolean;
-  keepValues?: boolean;
-  keepDefaultValues?: boolean;
-  keepIsSubmitted?: boolean;
-  keepTouched?: boolean;
-  keepIsValid?: boolean;
-  keepSubmitCount?: boolean;
-}
-
-export type UseFormBuilderReturn = Omit<UseFormReturn<FormValues>, 'formState'> & {
+export type UseFormBuilderReturn = Omit<UseFormReturn<FormValues>, 'formState' | 'watch'> & {
   state: FormState;
-  formState: RHFFormState<FormValues>;
+  formState: EnhancedFormState;
   resetForm: (options?: FormResetOptions) => void;
   setFieldFocus: UseFormSetFocus<FormValues>;
   validateField: (name: keyof FormValues) => Promise<boolean>;
   getFieldState: UseFormGetFieldState<FormValues>;
+  arrayFields: Record<string, ArrayFieldOperations>;
+  setValue: (name: keyof FormValues, value: any, options?: SetValueOptions) => void;
+  watch: UseFormWatch<FormValues>;
 };
 
 export const useFormBuilder = (
   config: FormConfig,
   options: UseFormBuilderOptions = {}
 ): UseFormBuilderReturn => {
-  const schema = createValidationSchema(config);
+  const schema = buildValidationSchema(config);
   
   const methods = useForm<FormValues>({
     mode: options.mode || 'onSubmit',
     reValidateMode: options.reValidateMode || 'onChange',
     resolver: zodResolver(schema),
     defaultValues: {
-      phone: '',
-      ssn: '',
-      country: '',
+      ...DEFAULT_VALUES,
       ...options.defaultValues
     },
     shouldUnregister: options.shouldUnregister,
     criteriaMode: options.criteriaMode,
     shouldFocusError: options.shouldFocusError,
-    delayError: options.delayError
+    delayError: options.delayError,
+    context: options.context
   });
 
-  const watchedValues = useWatch({ control: methods.control });
+  // Initialize array fields
+  const arrayFields: Record<string, ArrayFieldOperations> = {};
+  config.rows.forEach(row => {
+    row.columns.forEach(field => {
+      if (field.type === 'array') {
+        const { fields, append, prepend, remove, swap, move, insert } = useFieldArray({
+          control: methods.control,
+          name: field.id
+        });
+        arrayFields[field.id] = {
+          append,
+          prepend,
+          remove,
+          swap,
+          move,
+          insert
+        };
+      }
+    });
+  });
+
+  const watchedValues = useWatch({ 
+    control: methods.control
+  });
   
   // Ensure we have valid values
   const values: FormValues = {
-    phone: watchedValues?.phone || '',
-    ssn: watchedValues?.ssn || '',
-    country: watchedValues?.country || ''
+    ...DEFAULT_VALUES,
+    ...watchedValues
   };
   
   // Calculate masked values based on config
-  const maskedValues: Record<string, string> = {};
+  const maskedValues: Record<string, string | any[]> = {};
   config.rows.forEach(row => {
     row.columns.forEach(field => {
-      const id = field.id as keyof FormValues;
-      const rawValue = values[id];
+      const rawValue = values[field.id];
       if (field.type === 'text' && field.mask) {
         maskedValues[field.id] = applyMask(rawValue, field.mask);
+      } else if (field.type === 'array') {
+        maskedValues[field.id] = Array.isArray(rawValue) ? rawValue : [];
       } else {
-        maskedValues[field.id] = rawValue;
+        maskedValues[field.id] = rawValue || '';
       }
     });
   });
@@ -187,7 +243,20 @@ export const useFormBuilder = (
 
   // Single field validation
   const validateField = async (name: keyof FormValues) => {
-    return methods.trigger(name);
+    return methods.trigger(String(name));
+  };
+
+  // Enhanced setValue with additional options
+  const setValue = (
+    name: keyof FormValues,
+    value: any,
+    options?: SetValueOptions
+  ) => {
+    methods.setValue(String(name), value, {
+      shouldValidate: options?.shouldValidate,
+      shouldDirty: options?.shouldDirty,
+      shouldTouch: options?.shouldTouch
+    });
   };
 
   return {
@@ -196,9 +265,20 @@ export const useFormBuilder = (
       raw: values,
       masked: maskedValues
     },
+    formState: {
+      ...methods.formState,
+      isSubmitSuccessful: methods.formState.isSubmitSuccessful,
+      isSubmitted: methods.formState.isSubmitted,
+      isValidating: methods.formState.isValidating,
+      submitCount: methods.formState.submitCount,
+      isValid: methods.formState.isValid
+    } as EnhancedFormState,
     resetForm,
     setFieldFocus: methods.setFocus,
     validateField,
-    getFieldState: methods.getFieldState
+    getFieldState: methods.getFieldState,
+    arrayFields,
+    setValue,
+    watch: methods.watch
   };
 };
