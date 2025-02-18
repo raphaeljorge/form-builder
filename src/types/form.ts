@@ -61,19 +61,17 @@ export interface FieldProps {
   error?: string;
 }
 
-export type ExtractFieldNames<T extends FormConfig> = T extends { rows: Array<{ columns: Array<{ id: infer ID }> }> }
-  ? ID extends string
-    ? ID
-    : never
-  : never;
+export interface FormValues {
+  phone: string;
+  ssn: string;
+  country: string;
+}
 
-export type FormState<T extends FormConfig> = {
-  [K in ExtractFieldNames<T>]: FieldValue;
-};
+export interface DisplayValues {
+  [key: string]: FieldValue;
+}
 
-export interface FormBuilderProps<T extends FormConfig> {
-  config: T;
-  state: FormState<T>;
-  onChange: (fieldId: ExtractFieldNames<T>, value: FieldValue) => void;
-  RowWrapper?: React.ComponentType<RowWrapperProps>;
+export interface FormData {
+  values: FormValues;
+  display: DisplayValues;
 }

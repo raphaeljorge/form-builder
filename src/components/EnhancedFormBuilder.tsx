@@ -1,6 +1,15 @@
 import React, { memo } from 'react';
 import { Controller, useFormContext } from 'react-hook-form';
-import type { FormConfig, FieldConfig, RowWrapperProps, TextFieldConfig, SelectFieldConfig, FieldValue } from '../types/form';
+import type { 
+  FormConfig, 
+  FieldConfig, 
+  RowWrapperProps, 
+  TextFieldConfig, 
+  SelectFieldConfig, 
+  FieldValue,
+  FormData,
+  FormValues
+} from '../types/form';
 import { TextField } from './fields/TextField';
 import { SelectField } from './fields/SelectField';
 
@@ -12,9 +21,9 @@ DefaultRowWrapper.displayName = 'DefaultRowWrapper';
 
 interface EnhancedFormBuilderProps<T extends FormConfig> {
   config: T;
-  onSubmit: (data: Record<string, FieldValue>) => void;
+  onSubmit: (data: FormData) => void;
   RowWrapper?: React.ComponentType<RowWrapperProps>;
-  defaultValues?: Record<string, FieldValue>;
+  defaultValues?: FormValues;
 }
 
 interface FormFieldProps {
@@ -26,17 +35,34 @@ const FormField = memo<FormFieldProps>(({
   field, 
   config 
 }) => {
-  const { control } = useFormContext();
+  const { control, getValues, setValue } = useFormContext<FormData>();
+  const displayValues = getValues('display') || {};
 
   return (
     <div className="flex-1 min-w-[200px]">
       <Controller
-        name={field.id}
+        name={`values.${field.id}` as keyof FormData}
         control={control}
         render={({ field: { onChange, value }, fieldState: { error } }) => {
+          const handleChange = (val: FieldValue) => {
+            // Update raw value
+            onChange(val.raw);
+            
+            // Update display value
+            setValue('display', {
+              ...displayValues,
+              [field.id]: val
+            }, { shouldDirty: false });
+          };
+
+          const currentValue: FieldValue = {
+            masked: displayValues[field.id]?.masked || String(value || ''),
+            raw: String(value || '')
+          };
+
           const commonProps = {
-            value: value || { masked: '', raw: '' },
-            onChange: (val: FieldValue) => onChange(val),
+            value: currentValue,
+            onChange: handleChange,
             error: error?.message,
           };
 
@@ -62,7 +88,7 @@ export const EnhancedFormBuilder = memo(<T extends FormConfig>({
   onSubmit,
   RowWrapper = DefaultRowWrapper,
 }: EnhancedFormBuilderProps<T>) => {
-  const { handleSubmit, formState: { isSubmitting, isDirty }, reset } = useFormContext();
+  const { handleSubmit, formState: { isSubmitting, isDirty }, reset } = useFormContext<FormData>();
 
   return (
     <form 

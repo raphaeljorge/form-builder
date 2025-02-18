@@ -6,6 +6,25 @@ interface TextFieldProps extends Omit<FieldProps, 'config'> {
   config: TextFieldConfig;
 }
 
+const applyMask = (value: string, mask: string): string => {
+  const rawValue = value.replace(/\D/g, '');
+  let result = '';
+  let maskIndex = 0;
+  let valueIndex = 0;
+
+  while (maskIndex < mask.length && valueIndex < rawValue.length) {
+    if (mask[maskIndex] === '#') {
+      result += rawValue[valueIndex];
+      valueIndex++;
+    } else {
+      result += mask[maskIndex];
+    }
+    maskIndex++;
+  }
+
+  return result;
+};
+
 export const TextField = memo(({ 
   config, 
   value, 
@@ -25,22 +44,7 @@ export const TextField = memo(({
       rawValue = rawValue.slice(0, maxDigits);
       
       // Apply mask
-      const mask = config.mask;
-      let result = '';
-      let maskIndex = 0;
-      let valueIndex = 0;
-
-      while (maskIndex < mask.length && valueIndex < rawValue.length) {
-        if (mask[maskIndex] === '#') {
-          result += rawValue[valueIndex];
-          valueIndex++;
-        } else {
-          result += mask[maskIndex];
-        }
-        maskIndex++;
-      }
-      
-      maskedValue = result;
+      maskedValue = applyMask(rawValue, config.mask);
     }
     
     onChange({
@@ -48,6 +52,11 @@ export const TextField = memo(({
       raw: rawValue
     });
   }, [config.mask, onChange]);
+
+  // Ensure mask is applied to displayed value
+  const displayValue = config.mask && value.raw 
+    ? applyMask(value.raw, config.mask)
+    : value.masked;
 
   return (
     <div className="w-full">
@@ -62,7 +71,7 @@ export const TextField = memo(({
       <input
         id={config.id}
         type="text"
-        value={value.masked}
+        value={displayValue}
         onChange={handleChange}
         placeholder={config.placeholder}
         className={`

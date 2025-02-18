@@ -1,16 +1,9 @@
-import { FieldValue } from '../types/form';
-
-// Define the API expected format
-interface ApiFormData {
-  country: string;
-  phone: string;
-  ssn: string;
-}
+import type { FormValues } from '../types/form';
 
 // Simulate API delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-export const submitFormData = async (data: ApiFormData) => {
+export const submitFormData = async (data: FormValues) => {
   // Simulate API call
   await delay(1000);
   
@@ -41,23 +34,10 @@ export const submitFormData = async (data: ApiFormData) => {
   return {
     success: true,
     message: 'Form submitted successfully',
-    data
-  };
-};
-
-// Helper to transform form data to API format
-export const transformFormDataToApi = (formData: Record<string, FieldValue> | null | undefined): ApiFormData => {
-  if (!formData) {
-    return {
-      country: '',
-      phone: '',
-      ssn: ''
-    };
-  }
-
-  return {
-    country: formData.country?.raw || '',
-    phone: formData.phone?.raw || '',
-    ssn: formData.ssn?.raw || ''
+    data: {
+      phone: data.phone,
+      ssn: data.ssn,
+      country: data.country
+    }
   };
 };

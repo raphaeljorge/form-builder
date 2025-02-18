@@ -1,10 +1,10 @@
 import React, { memo } from 'react';
 import { EnhancedFormBuilder } from './components/EnhancedFormBuilder';
 import { formConfig } from './config/formConfig';
-import type { RowWrapperProps, FieldValue } from './types/form';
+import type { RowWrapperProps, DisplayValues } from './types/form';
 import { useForm, useWatch, FormProvider, useFormContext } from 'react-hook-form';
 import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
-import { submitFormData, transformFormDataToApi } from './services/api';
+import { submitFormData } from './services/api';
 
 const queryClient = new QueryClient();
 
@@ -29,26 +29,20 @@ const config = {
   }))
 };
 
-type FormState = Record<string, FieldValue>;
+interface FormData {
+  values: {
+    phone: string;
+    ssn: string;
+    country: string;
+  };
+  display: DisplayValues;
+}
 
 const FormStateDisplay = () => {
-  const { control } = useFormContext();
+  const { control } = useFormContext<FormData>();
   const formValues = useWatch({ control });
 
-  if (!formValues) return null;
-
-  const maskedValues: Record<string, string> = {};
-  const rawValues: Record<string, string> = {};
-
-  Object.entries(formValues).forEach(([key, value]) => {
-    if (value && typeof value === 'object' && 'masked' in value && 'raw' in value) {
-      maskedValues[key] = value.masked;
-      rawValues[key] = value.raw;
-    }
-  });
-
-  const apiFormat = transformFormDataToApi(formValues);
-  const hasValues = Object.values(apiFormat).some(value => value !== '');
+  if (!formValues?.values) return null;
 
   return (
     <div className="mt-8 p-4 bg-white rounded-lg shadow">
@@ -59,53 +53,47 @@ const FormStateDisplay = () => {
         <div className="grid grid-cols-2 gap-4">
           <div className="p-4 bg-gray-100 rounded">
             <p><strong>Phone:</strong></p>
-            <p>Raw: {formValues.phone?.raw || ''}</p>
-            <p>Masked: {formValues.phone?.masked || ''}</p>
+            <p>Raw: {formValues.values.phone || ''}</p>
+            <p>Masked: {formValues.display?.phone?.masked || ''}</p>
           </div>
           <div className="p-4 bg-gray-100 rounded">
-            <p><strong>Country:</strong> {formValues.country?.raw || ''}</p>
+            <p><strong>Country:</strong> {formValues.values.country || ''}</p>
           </div>
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <h3 className="text-lg font-medium mb-2">Masked Values:</h3>
+          <h3 className="text-lg font-medium mb-2">Display Values:</h3>
           <pre className="bg-gray-100 p-4 rounded">
-            {JSON.stringify(maskedValues, null, 2)}
+            {JSON.stringify(formValues.display, null, 2)}
           </pre>
         </div>
         <div>
-          <h3 className="text-lg font-medium mb-2">Raw Values:</h3>
+          <h3 className="text-lg font-medium mb-2">API Values:</h3>
           <pre className="bg-gray-100 p-4 rounded">
-            {JSON.stringify(rawValues, null, 2)}
+            {JSON.stringify(formValues.values, null, 2)}
           </pre>
         </div>
       </div>
-
-      {hasValues && (
-        <div className="mt-4">
-          <h3 className="text-lg font-medium mb-2">API Format:</h3>
-          <pre className="bg-gray-100 p-4 rounded">
-            {JSON.stringify(apiFormat, null, 2)}
-          </pre>
-        </div>
-      )}
     </div>
   );
 };
 
 const FormWithQuery = () => {
-  const methods = useForm<FormState>({
+  const methods = useForm<FormData>({
     defaultValues: {
-      phone: { masked: '', raw: '' },
-      ssn: { masked: '', raw: '' },
-      country: { masked: '', raw: '' }
+      values: {
+        phone: '',
+        ssn: '',
+        country: ''
+      },
+      display: {}
     }
   });
 
   const mutation = useMutation({
-    mutationFn: (data: FormState) => submitFormData(transformFormDataToApi(data)),
+    mutationFn: (data: FormData) => submitFormData(data.values),
     onSuccess: (data) => {
       console.log('Success:', data);
       methods.reset();
@@ -114,7 +102,7 @@ const FormWithQuery = () => {
       try {
         const errors = JSON.parse(error.message);
         Object.entries(errors).forEach(([key, message]) => {
-          methods.setError(key as any, { message: message as string });
+          methods.setError(`values.${key}` as any, { message: message as string });
         });
       } catch {
         console.error('Error:', error);
@@ -122,7 +110,7 @@ const FormWithQuery = () => {
     }
   });
 
-  const handleSubmit = (data: FormState) => {
+  const handleSubmit = (data: FormData) => {
     mutation.mutate(data);
   };
 
@@ -137,7 +125,7 @@ const FormWithQuery = () => {
           <EnhancedFormBuilder
             config={config}
             onSubmit={handleSubmit}
-            defaultValues={methods.getValues()}
+            defaultValues={methods.getValues().values}
           />
 
           {mutation.isSuccess && (
