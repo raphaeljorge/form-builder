@@ -1,4 +1,13 @@
-import { useForm, useWatch, UseFormReturn, FormState as RHFFormState } from 'react-hook-form';
+import { 
+  useForm, 
+  useWatch, 
+  UseFormReturn, 
+  FormState as RHFFormState,
+  FieldError,
+  UseFormSetFocus,
+  UseFormGetFieldState,
+  FieldValues
+} from 'react-hook-form';
 import { FormConfig, FormValues } from '../types/form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -101,12 +110,30 @@ export interface UseFormBuilderOptions {
   reValidateMode?: 'onSubmit' | 'onChange' | 'onBlur';
   defaultValues?: Partial<FormValues>;
   shouldUnregister?: boolean;
+  criteriaMode?: 'firstError' | 'all';
+  shouldFocusError?: boolean;
+  delayError?: number;
 }
 
-export interface UseFormBuilderReturn extends Omit<UseFormReturn<FormValues>, 'formState'> {
+export interface FormResetOptions {
+  keepErrors?: boolean;
+  keepDirty?: boolean;
+  keepValues?: boolean;
+  keepDefaultValues?: boolean;
+  keepIsSubmitted?: boolean;
+  keepTouched?: boolean;
+  keepIsValid?: boolean;
+  keepSubmitCount?: boolean;
+}
+
+export type UseFormBuilderReturn = Omit<UseFormReturn<FormValues>, 'formState'> & {
   state: FormState;
   formState: RHFFormState<FormValues>;
-}
+  resetForm: (options?: FormResetOptions) => void;
+  setFieldFocus: UseFormSetFocus<FormValues>;
+  validateField: (name: keyof FormValues) => Promise<boolean>;
+  getFieldState: UseFormGetFieldState<FormValues>;
+};
 
 export const useFormBuilder = (
   config: FormConfig,
@@ -124,7 +151,10 @@ export const useFormBuilder = (
       country: '',
       ...options.defaultValues
     },
-    shouldUnregister: options.shouldUnregister
+    shouldUnregister: options.shouldUnregister,
+    criteriaMode: options.criteriaMode,
+    shouldFocusError: options.shouldFocusError,
+    delayError: options.delayError
   });
 
   const watchedValues = useWatch({ control: methods.control });
@@ -150,11 +180,25 @@ export const useFormBuilder = (
     });
   });
 
+  // Enhanced form reset with options
+  const resetForm = (options?: FormResetOptions) => {
+    methods.reset(undefined, options);
+  };
+
+  // Single field validation
+  const validateField = async (name: keyof FormValues) => {
+    return methods.trigger(name);
+  };
+
   return {
     ...methods,
     state: {
       raw: values,
       masked: maskedValues
-    }
+    },
+    resetForm,
+    setFieldFocus: methods.setFocus,
+    validateField,
+    getFieldState: methods.getFieldState
   };
 };
