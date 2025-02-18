@@ -2,10 +2,10 @@ import React, { memo } from 'react';
 import { EnhancedFormBuilder } from './components/EnhancedFormBuilder';
 import { formConfig } from './config/formConfig';
 import type { RowWrapperProps, FormValues } from './types/form';
-import { FormProvider } from 'react-hook-form';
+import { FormProvider, useFormContext } from 'react-hook-form';
 import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
 import { submitFormData } from './services/api';
-import { useFormBuilder } from './hooks/useFormBuilder';
+import { useFormBuilder, UseFormBuilderReturn } from './hooks/useFormBuilder';
 
 const queryClient = new QueryClient();
 
@@ -31,47 +31,119 @@ const config = {
 };
 
 const FormStateDisplay = () => {
-  const { state } = useFormBuilder(config);
+  const methods = useFormContext() as UseFormBuilderReturn;
+  const { state, formState } = methods;
   const { raw, masked } = state;
 
+  // Track form state
+  const {
+    isDirty = false,
+    isValid = false,
+    isSubmitting = false,
+    touchedFields = {},
+    errors = {},
+    dirtyFields = {}
+  } = formState;
+
   return (
-    <div className="mt-8 p-4 bg-white rounded-lg shadow">
-      <h2 className="text-xl font-semibold mb-4">Form State:</h2>
-      
-      <div className="mb-6">
-        <h3 className="text-lg font-medium mb-2">Quick Access Values:</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="p-4 bg-gray-100 rounded">
-            <p><strong>Phone:</strong></p>
-            <p>Raw: {raw.phone}</p>
-            <p>Masked: {masked.phone}</p>
+    <div className="mt-8 space-y-6">
+      <div className="p-4 bg-white rounded-lg shadow">
+        <h2 className="text-xl font-semibold mb-4">Form Values:</h2>
+        
+        <div className="mb-6">
+          <h3 className="text-lg font-medium mb-2">Quick Access Values:</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 bg-gray-100 rounded">
+              <p><strong>Phone:</strong></p>
+              <p>Raw: {raw.phone}</p>
+              <p>Masked: {masked.phone}</p>
+              <p className="mt-2 text-sm text-gray-600">
+                Changed: {dirtyFields.phone ? 'Yes' : 'No'}
+              </p>
+            </div>
+            <div className="p-4 bg-gray-100 rounded">
+              <p><strong>Country:</strong> {raw.country}</p>
+              <p className="mt-2 text-sm text-gray-600">
+                Changed: {dirtyFields.country ? 'Yes' : 'No'}
+              </p>
+            </div>
           </div>
-          <div className="p-4 bg-gray-100 rounded">
-            <p><strong>Country:</strong> {raw.country}</p>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <h3 className="text-lg font-medium mb-2">Masked Values:</h3>
+            <pre className="bg-gray-100 p-4 rounded">
+              {JSON.stringify(masked, null, 2)}
+            </pre>
+          </div>
+          <div>
+            <h3 className="text-lg font-medium mb-2">Raw Values:</h3>
+            <pre className="bg-gray-100 p-4 rounded">
+              {JSON.stringify(raw, null, 2)}
+            </pre>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <h3 className="text-lg font-medium mb-2">Masked Values:</h3>
-          <pre className="bg-gray-100 p-4 rounded">
-            {JSON.stringify(masked, null, 2)}
-          </pre>
+      <div className="p-4 bg-white rounded-lg shadow">
+        <h2 className="text-xl font-semibold mb-4">Form State:</h2>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <h3 className="text-lg font-medium mb-2">Status:</h3>
+            <div className="space-y-2">
+              <p>
+                <span className="font-medium">Has Changes (Is Dirty):</span>
+                <span className={`ml-2 ${isDirty ? 'text-yellow-600' : 'text-green-600'}`}>
+                  {isDirty ? 'Yes - Form has unsaved changes' : 'No - Form is unchanged'}
+                </span>
+              </p>
+              <p>
+                <span className="font-medium">Is Valid:</span>
+                <span className={`ml-2 ${isValid ? 'text-green-600' : 'text-red-600'}`}>
+                  {isValid ? 'Yes - All fields are valid' : 'No - Form has validation errors'}
+                </span>
+              </p>
+              <p>
+                <span className="font-medium">Is Submitting:</span>
+                <span className={`ml-2 ${isSubmitting ? 'text-yellow-600' : 'text-green-600'}`}>
+                  {isSubmitting ? 'Yes - Form is being submitted' : 'No - Form is not submitting'}
+                </span>
+              </p>
+            </div>
+          </div>
+          <div>
+            <h3 className="text-lg font-medium mb-2">Changed Fields:</h3>
+            <pre className="bg-gray-100 p-4 rounded">
+              {JSON.stringify(Object.keys(dirtyFields), null, 2)}
+            </pre>
+          </div>
         </div>
-        <div>
-          <h3 className="text-lg font-medium mb-2">Raw Values:</h3>
-          <pre className="bg-gray-100 p-4 rounded">
-            {JSON.stringify(raw, null, 2)}
-          </pre>
-        </div>
+
+        {Object.keys(errors).length > 0 && (
+          <div className="mt-4">
+            <h3 className="text-lg font-medium mb-2">Errors:</h3>
+            <pre className="bg-red-50 text-red-900 p-4 rounded">
+              {JSON.stringify(errors, null, 2)}
+            </pre>
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
 const FormWithQuery = () => {
-  const methods = useFormBuilder(config);
+  const methods = useFormBuilder(config, {
+    mode: 'onChange',
+    reValidateMode: 'onBlur',
+    defaultValues: {
+      phone: '',
+      ssn: '',
+      country: ''
+    }
+  });
 
   const mutation = useMutation({
     mutationFn: submitFormData,
@@ -106,7 +178,6 @@ const FormWithQuery = () => {
           <EnhancedFormBuilder
             config={config}
             onSubmit={handleSubmit}
-            defaultValues={methods.getValues()}
           />
 
           {mutation.isSuccess && (
