@@ -374,41 +374,49 @@ const FormWithQuery = () => {
       ssn: '',
       country: '',
       emails: [''],
-      addresses: ['']
+      addresses: [''],
+      skills: [] // Initialize skills array
     }
   });
 
   const mutation = useMutation({
     mutationFn: submitFormData,
-    onSuccess: (data) => {
-      console.log('Success:', data);
+    onSuccess: (response) => {
+      console.log('Form submitted successfully:', response.data);
       methods.reset();
     },
     onError: (error: Error) => {
       try {
         const errors = JSON.parse(error.message) as Record<string, string>;
         Object.entries(errors).forEach(([key, message]) => {
-          // Handle each field type explicitly
-          switch (key) {
-            case 'phone':
-            case 'ssn':
-            case 'country':
-            case 'emails':
-            case 'addresses':
-              methods.setError(key, { message });
-              break;
-            default:
-              console.warn(`Unknown field: ${key}`);
+          // Check if key exists in FormValues type
+          const validFields = ['phone', 'ssn', 'country', 'emails', 'addresses', 'skills'] as const;
+          type ValidField = typeof validFields[number];
+          
+          if (validFields.includes(key as ValidField)) {
+            methods.setError(key as ValidField, { message });
           }
         });
       } catch {
-        console.error('Error:', error);
+        console.error('Error submitting form:', error);
+        // Set a generic error message
+        methods.setError('root', {
+          type: 'submitError',
+          message: 'Failed to submit form. Please try again.'
+        });
       }
     }
   });
 
   const handleSubmit = (data: FormValues) => {
-    mutation.mutate(data);
+    // Ensure all arrays are initialized
+    const formData = {
+      ...data,
+      skills: data.skills || [],
+      emails: data.emails || [''],
+      addresses: data.addresses || ['']
+    };
+    mutation.mutate(formData);
   };
 
   return (
@@ -451,4 +459,4 @@ export default function App() {
       <FormWithQuery />
     </QueryClientProvider>
   );
-}
+};

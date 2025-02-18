@@ -52,7 +52,6 @@ export const formConfig: FormConfig = {
           ],
           validation: {
             custom: (value) => {
-              // Example of custom validation
               return value === 'us' || 'Currently only accepting US applications';
             }
           }
@@ -61,6 +60,46 @@ export const formConfig: FormConfig = {
     },
     {
       id: 'row3',
+      wrapperProps: {
+        className: 'mb-4'
+      },
+      columns: [
+        {
+          id: 'skills',
+          type: 'chip',
+          label: 'Skills',
+          placeholder: 'Type to search skills...',
+          required: true,
+          options: [
+            'JavaScript',
+            'TypeScript',
+            'React',
+            'Node.js',
+            'Python',
+            'Java',
+            'C++',
+            'Ruby',
+            'Go',
+            'Rust',
+            'SQL',
+            'MongoDB',
+            'Redis',
+            'Docker',
+            'Kubernetes',
+            'AWS',
+            'Azure',
+            'GCP'
+          ],
+          minItems: 2,
+          maxItems: 5,
+          validation: {
+            message: 'Please select between 2 and 5 skills'
+          }
+        }
+      ]
+    },
+    {
+      id: 'row4',
       wrapperProps: {
         className: 'mb-4'
       },
@@ -85,7 +124,7 @@ export const formConfig: FormConfig = {
       ]
     },
     {
-      id: 'row4',
+      id: 'row5',
       wrapperProps: {
         className: 'mb-4'
       },

@@ -7,7 +7,7 @@ export interface DebounceConfig {
   delay: number;
 }
 
-export type FieldType = 'text' | 'select' | 'array';
+export type FieldType = 'text' | 'select' | 'array' | 'chip';
 
 export interface ValidationConfig {
   min?: number;
@@ -50,7 +50,14 @@ export interface ArrayFieldConfig extends BaseFieldConfig {
   maxItems?: number;
 }
 
-export type FieldConfig = TextFieldConfig | SelectFieldConfig | ArrayFieldConfig;
+export interface ChipFieldConfig extends BaseFieldConfig {
+  type: 'chip';
+  options: string[];
+  minItems?: number;
+  maxItems?: number;
+}
+
+export type FieldConfig = TextFieldConfig | SelectFieldConfig | ArrayFieldConfig | ChipFieldConfig;
 
 export interface RowWrapperProps {
   children: ReactNode;
@@ -77,7 +84,7 @@ export interface BaseFormValues {
 
 // Extended form values type
 export type FormValues = BaseFormValues & {
-  [key: string]: string | any[] | undefined;
+  [key: string]: string | string[] | any[] | undefined;
 }
 
 // Base schema

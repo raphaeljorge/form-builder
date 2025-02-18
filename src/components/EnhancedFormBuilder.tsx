@@ -7,11 +7,13 @@ import type {
   TextFieldConfig, 
   SelectFieldConfig,
   ArrayFieldConfig,
+  ChipFieldConfig,
   FormValues
 } from '../types/form';
 import { TextField } from './fields/TextField';
 import { SelectField } from './fields/SelectField';
 import { ArrayField } from './fields/ArrayField';
+import { ChipField } from './fields/ChipField';
 
 const DefaultRowWrapper = memo<RowWrapperProps>(({ children, className = '' }) => (
   <div className={`flex flex-wrap gap-4 mb-4 ${className}`}>{children}</div>
@@ -35,6 +37,7 @@ interface FormFieldProps {
 const isTextField = (field: FieldConfig): field is TextFieldConfig => field.type === 'text';
 const isSelectField = (field: FieldConfig): field is SelectFieldConfig => field.type === 'select';
 const isArrayField = (field: FieldConfig): field is ArrayFieldConfig => field.type === 'array';
+const isChipField = (field: FieldConfig): field is ChipFieldConfig => field.type === 'chip';
 
 const FormField = memo<FormFieldProps>(({ 
   field, 
@@ -75,6 +78,17 @@ const FormField = memo<FormFieldProps>(({
           if (isArrayField(field)) {
             return (
               <ArrayField
+                config={field}
+                value={Array.isArray(value) ? value : []}
+                onChange={onChange}
+                error={errorMessage}
+              />
+            );
+          }
+
+          if (isChipField(field)) {
+            return (
+              <ChipField
                 config={field}
                 value={Array.isArray(value) ? value : []}
                 onChange={onChange}
