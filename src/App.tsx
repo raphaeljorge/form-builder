@@ -5,7 +5,7 @@ import type { RowWrapperProps, FormValues } from './types/form';
 import { FormProvider, useFormContext } from 'react-hook-form';
 import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
 import { submitFormData } from './services/api';
-import { useFormBuilder, UseFormBuilderReturn } from './hooks/useFormBuilder';
+import { useFormBuilder, UseFormBuilderReturn, FormResetOptions } from './hooks/useFormBuilder';
 
 const queryClient = new QueryClient();
 
@@ -28,6 +28,134 @@ const config = {
     ...row,
     RowWrapper: index === 0 ? PrimaryRowWrapper : SecondaryRowWrapper
   }))
+};
+
+const FormControls = () => {
+  const methods = useFormContext() as UseFormBuilderReturn;
+  const { resetForm, setFieldFocus, validateField, getFieldState } = methods;
+
+  // Example of field state tracking
+  const phoneState = getFieldState('phone');
+  const ssnState = getFieldState('ssn');
+
+  // Reset options examples
+  const resetOptions: Record<string, FormResetOptions | null> = {
+    'Complete Reset': null,
+    'Keep Errors': { keepErrors: true },
+    'Keep Values': { keepValues: true },
+    'Keep Touched': { keepTouched: true },
+    'Keep All': {
+      keepErrors: true,
+      keepValues: true,
+      keepTouched: true,
+      keepDirty: true
+    }
+  };
+
+  return (
+    <div className="mt-6 p-4 bg-white rounded-lg shadow">
+      <h2 className="text-xl font-semibold mb-4">Form Controls</h2>
+      
+      <div className="space-y-6">
+        {/* Field Focus Controls */}
+        <div>
+          <h3 className="text-lg font-medium mb-2">Focus Management:</h3>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => setFieldFocus('phone')}
+              className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+            >
+              Focus Phone
+            </button>
+            <button
+              type="button"
+              onClick={() => setFieldFocus('ssn')}
+              className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+            >
+              Focus SSN
+            </button>
+            <button
+              type="button"
+              onClick={() => setFieldFocus('country')}
+              className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+            >
+              Focus Country
+            </button>
+          </div>
+        </div>
+
+        {/* Field Validation Controls */}
+        <div>
+          <h3 className="text-lg font-medium mb-2">Field Validation:</h3>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => validateField('phone')}
+              className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200"
+            >
+              Validate Phone
+            </button>
+            <button
+              type="button"
+              onClick={() => validateField('ssn')}
+              className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200"
+            >
+              Validate SSN
+            </button>
+          </div>
+        </div>
+
+        {/* Reset Controls */}
+        <div>
+          <h3 className="text-lg font-medium mb-2">Reset Options:</h3>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(resetOptions).map(([label, options]) => (
+              <button
+                key={label}
+                type="button"
+                onClick={() => {
+                  resetForm(options || undefined);
+                  // Force re-render to ensure state is updated
+                  setTimeout(() => {
+                    methods.setValue('phone', '', { shouldDirty: false });
+                    methods.setValue('ssn', '', { shouldDirty: false });
+                    methods.setValue('country', '', { shouldDirty: false });
+                  }, 0);
+                }}
+                className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200"
+              >
+                Reset ({label})
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Field State Display */}
+        <div>
+          <h3 className="text-lg font-medium mb-2">Field States:</h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-3 bg-gray-50 rounded">
+              <h4 className="font-medium mb-2">Phone Field:</h4>
+              <div className="space-y-1 text-sm">
+                <p>Touched: {phoneState.isTouched ? 'Yes' : 'No'}</p>
+                <p>Dirty: {phoneState.isDirty ? 'Yes' : 'No'}</p>
+                <p>Error: {phoneState.error ? phoneState.error.message : 'None'}</p>
+              </div>
+            </div>
+            <div className="p-3 bg-gray-50 rounded">
+              <h4 className="font-medium mb-2">SSN Field:</h4>
+              <div className="space-y-1 text-sm">
+                <p>Touched: {ssnState.isTouched ? 'Yes' : 'No'}</p>
+                <p>Dirty: {ssnState.isDirty ? 'Yes' : 'No'}</p>
+                <p>Error: {ssnState.error ? ssnState.error.message : 'None'}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 const FormStateDisplay = () => {
@@ -138,6 +266,8 @@ const FormWithQuery = () => {
   const methods = useFormBuilder(config, {
     mode: 'onChange',
     reValidateMode: 'onBlur',
+    criteriaMode: 'all',
+    shouldFocusError: true,
     defaultValues: {
       phone: '',
       ssn: '',
@@ -192,6 +322,7 @@ const FormWithQuery = () => {
             </div>
           )}
 
+          <FormControls />
           <FormStateDisplay />
         </div>
       </div>
