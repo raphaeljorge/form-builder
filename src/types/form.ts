@@ -13,7 +13,7 @@ export interface ValidationConfig {
   min?: number;
   max?: number;
   pattern?: string;
-  custom?: (value: string) => boolean | string;
+  custom?: (value: string, formValues?: Record<string, any>) => boolean | string;
   required?: boolean;
   validate?: {
     [key: string]: (value: any) => boolean | string | Promise<boolean | string>;
@@ -80,6 +80,9 @@ export interface BaseFormValues {
   phone: string;
   ssn: string;
   country: string;
+  state?: string;
+  password?: string;
+  confirmPassword?: string;
 }
 
 // Extended form values type
@@ -91,7 +94,10 @@ export type FormValues = BaseFormValues & {
 const baseSchemaShape = {
   phone: z.string(),
   ssn: z.string(),
-  country: z.string()
+  country: z.string(),
+  state: z.string().optional(),
+  password: z.string().optional(),
+  confirmPassword: z.string().optional()
 } as const;
 
 export const baseSchema = z.object(baseSchemaShape);

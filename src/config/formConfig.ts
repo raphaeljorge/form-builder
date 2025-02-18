@@ -1,4 +1,4 @@
-import type { FormConfig } from '../types/form';
+import type { FormConfig, FormValues } from '../types/form';
 
 export const formConfig: FormConfig = {
   rows: [
@@ -56,10 +56,59 @@ export const formConfig: FormConfig = {
             }
           }
         },
+        {
+          id: 'state',
+          type: 'select',
+          label: 'State',
+          required: true,
+          options: [
+            { value: 'ca', label: 'California' },
+            { value: 'ny', label: 'New York' },
+            { value: 'tx', label: 'Texas' },
+          ],
+          validation: {
+            deps: ['country'],
+            custom: (value: string, formValues?: Record<string, any>) => {
+              if (!formValues || formValues.country !== 'us') return true;
+              return value ? true : 'State is required for US addresses';
+            }
+          }
+        }
       ],
     },
     {
       id: 'row3',
+      wrapperProps: {
+        className: 'mb-4'
+      },
+      columns: [
+        {
+          id: 'password',
+          type: 'text',
+          label: 'Password',
+          required: true,
+          validation: {
+            pattern: '^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,}$',
+            message: 'Password must be at least 8 characters with letters and numbers'
+          }
+        },
+        {
+          id: 'confirmPassword',
+          type: 'text',
+          label: 'Confirm Password',
+          required: true,
+          validation: {
+            deps: ['password'],
+            custom: (value: string, formValues?: Record<string, any>) => {
+              if (!formValues) return true;
+              return value === formValues.password || 'Passwords must match';
+            }
+          }
+        }
+      ]
+    },
+    {
+      id: 'row4',
       wrapperProps: {
         className: 'mb-4'
       },
@@ -99,7 +148,7 @@ export const formConfig: FormConfig = {
       ]
     },
     {
-      id: 'row4',
+      id: 'row5',
       wrapperProps: {
         className: 'mb-4'
       },
@@ -124,7 +173,7 @@ export const formConfig: FormConfig = {
       ]
     },
     {
-      id: 'row5',
+      id: 'row6',
       wrapperProps: {
         className: 'mb-4'
       },
