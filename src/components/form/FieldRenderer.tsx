@@ -1,4 +1,4 @@
-import React, { memo } from 'react';
+import React, { memo, useMemo } from 'react';
 import type { 
   FieldConfig, 
   TextFieldConfig, 
@@ -24,58 +24,62 @@ interface FieldRendererProps {
   error?: string;
 }
 
-export const FieldRenderer = memo<FieldRendererProps>(({ 
-  field, 
-  value, 
-  onChange, 
-  error 
+export const FieldRenderer = memo<FieldRendererProps>(({
+  field,
+  value,
+  onChange,
+  error
 }) => {
-  if (isTextField(field)) {
-    return (
-      <TextField
-        config={field}
-        value={value?.toString() || ''}
-        onChange={onChange}
-        error={error}
-      />
-    );
-  }
+  const renderField = useMemo(() => {
+    if (isTextField(field)) {
+      return (
+        <TextField
+          config={field}
+          value={value?.toString() || ''}
+          onChange={onChange}
+          error={error}
+        />
+      );
+    }
 
-  if (isSelectField(field)) {
-    return (
-      <SelectField
-        config={field}
-        value={value?.toString() || ''}
-        onChange={onChange}
-        error={error}
-      />
-    );
-  }
+    if (isSelectField(field)) {
+      return (
+        <SelectField
+          config={field}
+          value={value?.toString() || ''}
+          onChange={onChange}
+          error={error}
+        />
+      );
+    }
 
-  if (isArrayField(field)) {
-    return (
-      <ArrayField
-        config={field}
-        value={Array.isArray(value) ? value : []}
-        onChange={onChange}
-        error={error}
-      />
-    );
-  }
+    if (isArrayField(field)) {
+      return (
+        <ArrayField
+          config={field}
+          value={Array.isArray(value) ? value : []}
+          onChange={onChange}
+          error={error}
+        />
+      );
+    }
 
-  if (isChipField(field)) {
-    return (
-      <ChipField
-        config={field}
-        value={Array.isArray(value) ? value : []}
-        onChange={onChange}
-        error={error}
-      />
-    );
-  }
+    if (isChipField(field)) {
+      return (
+        <ChipField
+          config={field}
+          value={Array.isArray(value) ? value : []}
+          onChange={onChange}
+          error={error}
+        />
+      );
+    }
 
-  const unknownField = field as { type: string };
-  throw new Error(`Unsupported field type: ${unknownField.type}`);
+    const unknownField = field as { type: string };
+    throw new Error(`Unsupported field type: ${unknownField.type}`);
+  }, [field, value, onChange, error]);
+
+  return renderField;
 });
 
 FieldRenderer.displayName = 'FieldRenderer';

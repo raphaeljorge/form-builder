@@ -13,18 +13,22 @@ export const FormRow = memo<FormRowProps>(({ row, RowWrapper }) => {
     [row.RowWrapper, RowWrapper]
   );
 
+  const fields = useMemo(() =>
+    row.columns.map((fieldConfig) => (
+      <FormField
+        key={fieldConfig.id}
+        field={fieldConfig}
+        fieldId={fieldConfig.id}
+      />
+    )),
+    [row.columns]
+  );
+
   return (
     <WrapperComponent
-      key={row.id}
       {...row.wrapperProps}
     >
-      {row.columns.map((fieldConfig) => (
-        <FormField
-          key={fieldConfig.id}
-          field={fieldConfig}
-          fieldId={fieldConfig.id}
-        />
-      ))}
+      {fields}
     </WrapperComponent>
   );
 });

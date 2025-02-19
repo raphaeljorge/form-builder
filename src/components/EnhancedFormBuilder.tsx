@@ -1,4 +1,4 @@
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useMemo } from 'react';
 import { useFormContext } from 'react-hook-form';
 import type { FormConfig, FormValues, RowWrapperProps } from '../types/form';
 import { DefaultRowWrapper } from './form/DefaultRowWrapper';
@@ -23,24 +23,39 @@ export const EnhancedFormBuilder = memo(<T extends FormConfig>({
     reset();
   }, [reset]);
 
-  return (
-    <form 
-      className="w-full max-w-4xl mx-auto p-6"
-      onSubmit={handleSubmit(onSubmit)}
-    >
-      {config.rows.map((row) => (
-        <FormRow
-          key={row.id}
-          row={row}
-          RowWrapper={RowWrapper}
-        />
-      ))}
-      
-      <FormActions
-        onReset={handleReset}
-        isSubmitting={isSubmitting}
-        isDirty={isDirty}
+  const handleFormSubmit = useCallback(
+    (data: FormValues) => {
+      onSubmit(data);
+    },
+    [onSubmit]
+  );
+
+  const rows = useMemo(() =>
+    config.rows.map((row) => (
+      <FormRow
+        key={row.id}
+        row={row}
+        RowWrapper={RowWrapper}
       />
+    )),
+    [config.rows, RowWrapper]
+  );
+
+  const actions = useMemo(() => (
+    <FormActions
+      onReset={handleReset}
+      isSubmitting={isSubmitting}
+      isDirty={isDirty}
+    />
+  ), [handleReset, isSubmitting, isDirty]);
+
+  return (
+    <form
+      className="w-full max-w-4xl mx-auto p-6"
+      onSubmit={handleSubmit(handleFormSubmit)}
+    >
+      {rows}
+      {actions}
     </form>
   );
 });
