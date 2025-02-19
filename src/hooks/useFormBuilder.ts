@@ -204,29 +204,86 @@ export const useFormBuilder = (
     context: options.context
   });
 
-  // Initialize array fields
+  // Initialize array fields with proper field array handling
   const arrayFields: Record<string, ArrayFieldOperations> = {};
   config.rows.forEach(row => {
     row.columns.forEach(field => {
       if (field.type === 'array' || field.type === 'chip') {
-        const { append, prepend, remove, swap, move, insert } = useFieldArray({
+        const fieldArray = useFieldArray({
           control: methods.control,
-          name: field.id
+          name: field.id,
+          shouldUnregister: false // Prevent field unregistering
         });
+
         arrayFields[field.id] = {
-          append,
-          prepend,
-          remove,
-          swap,
-          move,
-          insert
+          append: (value) => {
+            const currentValues = methods.getValues(field.id) as any[];
+            methods.setValue(field.id, [...currentValues, value], {
+              shouldDirty: true,
+              shouldTouch: true,
+              shouldValidate: true
+            });
+          },
+          prepend: (value) => {
+            const currentValues = methods.getValues(field.id) as any[];
+            methods.setValue(field.id, [value, ...currentValues], {
+              shouldDirty: true,
+              shouldTouch: true,
+              shouldValidate: true
+            });
+          },
+          remove: (index) => {
+            const currentValues = methods.getValues(field.id) as any[];
+            methods.setValue(
+              field.id,
+              currentValues.filter((_: any, i: number) => i !== index),
+              {
+                shouldDirty: true,
+                shouldTouch: true,
+                shouldValidate: true
+              }
+            );
+          },
+          swap: (indexA, indexB) => {
+            const currentValues = methods.getValues(field.id) as any[];
+            const newValues = [...currentValues];
+            [newValues[indexA], newValues[indexB]] = [newValues[indexB], newValues[indexA]];
+            methods.setValue(field.id, newValues, {
+              shouldDirty: true,
+              shouldTouch: true,
+              shouldValidate: true
+            });
+          },
+          move: (from, to) => {
+            const currentValues = methods.getValues(field.id) as any[];
+            const newValues = [...currentValues];
+            const [movedItem] = newValues.splice(from, 1);
+            newValues.splice(to, 0, movedItem);
+            methods.setValue(field.id, newValues, {
+              shouldDirty: true,
+              shouldTouch: true,
+              shouldValidate: true
+            });
+          },
+          insert: (index, value) => {
+            const currentValues = methods.getValues(field.id) as any[];
+            const newValues = [...currentValues];
+            newValues.splice(index, 0, value);
+            methods.setValue(field.id, newValues, {
+              shouldDirty: true,
+              shouldTouch: true,
+              shouldValidate: true
+            });
+          }
         };
       }
     });
   });
 
+  // Use watch to track all form values
   const watchedValues = useWatch({ 
-    control: methods.control
+    control: methods.control,
+    defaultValue: initialValues
   });
   
   // Ensure we have valid values
@@ -252,7 +309,10 @@ export const useFormBuilder = (
 
   // Enhanced form reset with options
   const resetForm = (options?: FormResetOptions) => {
-    methods.reset(undefined, options);
+    methods.reset(undefined, {
+      ...options,
+      keepDefaultValues: true // Maintain default values
+    });
   };
 
   // Single field validation
@@ -266,11 +326,20 @@ export const useFormBuilder = (
     value: any,
     options?: SetValueOptions
   ) => {
-    methods.setValue(String(name), value, {
-      shouldValidate: options?.shouldValidate,
-      shouldDirty: options?.shouldDirty,
-      shouldTouch: options?.shouldTouch
-    });
+    const currentValue = methods.getValues(String(name));
+    const hasChanged = JSON.stringify(currentValue) !== JSON.stringify(value);
+    
+    if (hasChanged) {
+      methods.setValue(String(name), value, {
+        shouldValidate: true,
+        shouldDirty: true,
+        shouldTouch: true,
+        ...options
+      });
+      
+      // Force update form state
+      methods.trigger(String(name));
+    }
   };
 
   return {
@@ -281,11 +350,13 @@ export const useFormBuilder = (
     },
     formState: {
       ...methods.formState,
+      isDirty: Object.keys(methods.formState.dirtyFields || {}).length > 0,
       isSubmitSuccessful: methods.formState.isSubmitSuccessful,
       isSubmitted: methods.formState.isSubmitted,
       isValidating: methods.formState.isValidating,
       submitCount: methods.formState.submitCount,
-      isValid: methods.formState.isValid
+      isValid: methods.formState.isValid,
+      dirtyFields: methods.formState.dirtyFields || {}
     } as EnhancedFormState,
     resetForm,
     setFieldFocus: methods.setFocus,

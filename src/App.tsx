@@ -40,7 +40,6 @@ const getDefaultValues = () => {
     password: '',
     confirmPassword: '',
     skills: [],
-    // Initialize array fields with one empty item
     emails: [''],
     addresses: ['']
   };
@@ -50,7 +49,43 @@ const getDefaultValues = () => {
 
 const ArrayFieldControls = () => {
   const methods = useFormContext() as UseFormBuilderReturn;
-  const { arrayFields } = methods;
+  const { arrayFields, setValue, getValues } = methods;
+
+  const handleAddEmail = () => {
+    const currentEmails = (getValues('emails') || []) as string[];
+    setValue('emails', [...currentEmails, ''], {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true
+    });
+  };
+
+  const handleAddAddress = () => {
+    const currentAddresses = (getValues('addresses') || []) as string[];
+    setValue('addresses', [...currentAddresses, ''], {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true
+    });
+  };
+
+  const handleRemoveEmail = (index: number) => {
+    const currentEmails = (getValues('emails') || []) as string[];
+    setValue('emails', currentEmails.filter((_: string, i: number) => i !== index), {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true
+    });
+  };
+
+  const handleRemoveAddress = (index: number) => {
+    const currentAddresses = (getValues('addresses') || []) as string[];
+    setValue('addresses', currentAddresses.filter((_: string, i: number) => i !== index), {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true
+    });
+  };
 
   return (
     <div className="mt-6 p-4 bg-white rounded-lg shadow">
@@ -62,24 +97,17 @@ const ArrayFieldControls = () => {
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => arrayFields.emails?.append('')}
+            onClick={handleAddEmail}
             className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
           >
             Add Email
           </button>
           <button
             type="button"
-            onClick={() => arrayFields.emails?.remove(0)}
+            onClick={() => handleRemoveEmail(0)}
             className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200"
           >
             Remove First
-          </button>
-          <button
-            type="button"
-            onClick={() => arrayFields.emails?.move(0, -1)}
-            className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200"
-          >
-            Move Up
           </button>
         </div>
       </div>
@@ -90,24 +118,17 @@ const ArrayFieldControls = () => {
         <div className="flex gap-2">
           <button
             type="button"
-            onClick={() => arrayFields.addresses?.append('')}
+            onClick={handleAddAddress}
             className="px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
           >
             Add Address
           </button>
           <button
             type="button"
-            onClick={() => arrayFields.addresses?.remove(0)}
+            onClick={() => handleRemoveAddress(0)}
             className="px-3 py-1 text-sm bg-red-100 text-red-700 rounded hover:bg-red-200"
           >
             Remove First
-          </button>
-          <button
-            type="button"
-            onClick={() => arrayFields.addresses?.move(0, -1)}
-            className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded hover:bg-green-200"
-          >
-            Move Up
           </button>
         </div>
       </div>
@@ -397,11 +418,19 @@ const FormWithQuery = () => {
     const { emails, addresses } = methods.getValues();
     
     if (!emails || emails.length === 0) {
-      methods.setValue('emails', ['']);
+      methods.setValue('emails', [''], {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true
+      });
     }
     
     if (!addresses || addresses.length === 0) {
-      methods.setValue('addresses', ['']);
+      methods.setValue('addresses', [''], {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true
+      });
     }
   }, [methods]);
 

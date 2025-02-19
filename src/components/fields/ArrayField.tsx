@@ -1,6 +1,7 @@
 import React from 'react';
 import { ArrayFieldConfig, TextFieldConfig } from '../../types/form';
 import { TextField } from './TextField';
+import { useFormContext } from 'react-hook-form';
 
 interface ArrayFieldProps {
   config: ArrayFieldConfig;
@@ -15,10 +16,21 @@ export const ArrayField: React.FC<ArrayFieldProps> = ({
   onChange,
   error
 }) => {
+  const { setValue, getValues } = useFormContext();
+
   const handleItemChange = (index: number, itemValue: string) => {
-    const newValue = [...value];
-    newValue[index] = itemValue;
-    onChange(newValue);
+    const currentValues = [...(getValues(config.id) || [])];
+    currentValues[index] = itemValue;
+    
+    // Update form state
+    setValue(config.id, currentValues, {
+      shouldDirty: true,
+      shouldTouch: true,
+      shouldValidate: true
+    });
+    
+    // Notify parent component
+    onChange(currentValues);
   };
 
   // Create text field config from template
@@ -43,8 +55,8 @@ export const ArrayField: React.FC<ArrayFieldProps> = ({
         {config.required && <span className="text-red-500 ml-1">*</span>}
       </label>
       <div className="space-y-2">
-        {value.map((item, index) => (
-          <div key={index} className="flex gap-2">
+        {(Array.isArray(value) ? value : []).map((item, index) => (
+          <div key={`${config.id}-${index}`} className="flex gap-2">
             <TextField
               config={createTextFieldConfig(index)}
               value={item}

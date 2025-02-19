@@ -12,30 +12,33 @@ export const FormField = memo<FormFieldProps>(({
   field,
   fieldId
 }) => {
-  const { control, getValues } = useFormContext<FormValues>();
+  const { control, setValue, getValues } = useFormContext<FormValues>();
   
   // Initialize field with default value if needed
   useEffect(() => {
     const currentValue = getValues(fieldId);
     if (currentValue === undefined) {
-      if (field.type === 'array' || field.type === 'chip') {
-        control._defaultValues[fieldId] = [];
-      } else {
-        control._defaultValues[fieldId] = '';
-      }
+      setValue(fieldId, field.type === 'array' || field.type === 'chip' ? [] : '', {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true
+      });
     }
-  }, [control, fieldId, field.type, getValues]);
+  }, [control, fieldId, field.type, setValue, getValues]);
 
   return (
     <div className="flex-1 min-w-[200px]">
       <Controller
         name={fieldId}
         control={control}
-        render={({ field: { onChange, value }, fieldState: { error } }) => (
+        defaultValue={field.type === 'array' || field.type === 'chip' ? [] : ''}
+        render={({ field: { onChange, value, ref }, fieldState: { error } }) => (
           <FieldRenderer
             field={field}
             value={value ?? (field.type === 'array' || field.type === 'chip' ? [] : '')}
-            onChange={onChange}
+            onChange={(newValue) => {
+              onChange(newValue);
+            }}
             error={error?.message}
           />
         )}
