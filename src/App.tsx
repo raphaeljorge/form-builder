@@ -1,11 +1,12 @@
-import React, { memo, useMemo, useEffect } from 'react';
+import React, { memo, useMemo } from 'react';
 import { EnhancedFormBuilder } from './components/EnhancedFormBuilder';
 import { formConfig } from './config/formConfig';
 import type { RowWrapperProps, FormValues } from './types/form';
 import { FormProvider, useFormContext } from './context/FormContext';
 import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
 import { submitFormData } from './services/api';
-import { useFormBuilder, UseFormBuilderReturn } from './hooks/useFormBuilder';
+import { useFormBuilder } from './hooks/useFormBuilder';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 const queryClient = new QueryClient();
 
@@ -397,27 +398,39 @@ const FormWithQuery = () => {
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="max-w-4xl mx-auto">          
         <FormProvider formMethods={formMethods}>
-          <EnhancedFormBuilder
-            config={config}
-            onSubmit={handleSubmit}
-            defaultValues={defaultValues}
-          />
+          <ErrorBoundary
+            fallback={
+              <div className="p-4 bg-red-100 text-red-800 rounded-md">
+                <h2 className="text-lg font-semibold mb-2">Something went wrong with the form</h2>
+                <p>Please try refreshing the page or contact support if the issue persists.</p>
+              </div>
+            }
+            onError={(error) => {
+              console.error('Form error:', error);
+            }}
+          >
+            <EnhancedFormBuilder
+              config={config}
+              onSubmit={handleSubmit}
+              defaultValues={defaultValues}
+            />
 
-          {mutation.isSuccess && (
-            <div className="mt-4 p-4 bg-green-100 text-green-700 rounded">
-              Form submitted successfully!
-            </div>
-          )}
+            {mutation.isSuccess && (
+              <div className="mt-4 p-4 bg-green-100 text-green-700 rounded">
+                Form submitted successfully!
+              </div>
+            )}
 
-          {mutation.isError && (
-            <div className="mt-4 p-4 bg-red-100 text-red-700 rounded">
-              An error occurred while submitting the form.
-            </div>
-          )}
+            {mutation.isError && (
+              <div className="mt-4 p-4 bg-red-100 text-red-700 rounded">
+                An error occurred while submitting the form.
+              </div>
+            )}
 
-          <FormControls />
-          <ArrayFieldControls />
-          <FormStateDisplay />
+            <FormControls />
+            <ArrayFieldControls />
+            <FormStateDisplay />
+          </ErrorBoundary>
         </FormProvider>
       </div>
     </div>
@@ -426,8 +439,10 @@ const FormWithQuery = () => {
 
 export default function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <FormWithQuery />
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <FormWithQuery />
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 };

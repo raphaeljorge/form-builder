@@ -1,54 +1,83 @@
-import { ReactNode } from 'react';
 import * as z from 'zod';
 
-export interface DebounceConfig {
-  enabled: boolean;
-  delay: number;
+// Base form schema
+export const baseSchema = z.object({
+  phone: z.string().optional(),
+  ssn: z.string().optional(),
+  country: z.string().optional(),
+  state: z.string().optional(),
+  password: z.string().optional(),
+  confirmPassword: z.string().optional()
+});
+
+// Helper to create a validation schema with array fields
+export const createValidationSchema = (
+  baseSchema: z.ZodObject<any>,
+  arrayFields: Record<string, z.ZodTypeAny>
+) => {
+  return baseSchema.extend(arrayFields);
+};
+
+// Infer the type from the schema
+export type FormSchema = ReturnType<typeof createValidationSchema>;
+export type BaseFormValues = z.infer<typeof baseSchema>;
+export type FormValues = BaseFormValues & Record<string, any>;
+
+// Field validation error
+export interface ValidationError {
+  path: string[];
+  message: string;
 }
 
+export interface FieldError {
+  type: string;
+  message: string;
+}
+
+// Form field types
 export type FieldType = 'text' | 'select' | 'array' | 'chip';
 
-export interface ValidationConfig {
-  min?: number;
-  max?: number;
-  pattern?: string;
-  custom?: (value: string, formValues?: Record<string, any>) => boolean | string;
-  required?: boolean;
-  validate?: {
-    [key: string]: (value: any) => boolean | string | Promise<boolean | string>;
-  };
-  deps?: string[];
-  message?: string;
-}
-
+// Base field configuration
 export interface BaseFieldConfig {
   id: string;
   type: FieldType;
   label?: string;
   placeholder?: string;
-  mask?: string;
   required?: boolean;
-  validation?: ValidationConfig;
-  shouldUnregister?: boolean;
-  defaultValue?: any;
+  validation?: {
+    pattern?: string;
+    message?: string;
+    custom?: (value: string, formValues: FormValues) => boolean | string;
+  };
 }
 
+// Text field configuration
 export interface TextFieldConfig extends BaseFieldConfig {
   type: 'text';
+  mask?: string;
 }
 
+// Select field option
+export interface SelectOption {
+  value: string;
+  label: string;
+}
+
+// Select field configuration
 export interface SelectFieldConfig extends BaseFieldConfig {
   type: 'select';
-  options: Array<{ value: string; label: string }>;
+  options: SelectOption[];
 }
 
+// Array field configuration
 export interface ArrayFieldConfig extends BaseFieldConfig {
   type: 'array';
-  template: FieldConfig;
+  template: TextFieldConfig;
   minItems?: number;
   maxItems?: number;
 }
 
+// Chip field configuration
 export interface ChipFieldConfig extends BaseFieldConfig {
   type: 'chip';
   options: string[];
@@ -56,90 +85,62 @@ export interface ChipFieldConfig extends BaseFieldConfig {
   maxItems?: number;
 }
 
+// Union type for all field configurations
 export type FieldConfig = TextFieldConfig | SelectFieldConfig | ArrayFieldConfig | ChipFieldConfig;
 
-export interface RowWrapperProps {
-  children: ReactNode;
-  className?: string;
-}
-
-export interface Row {
+// Form row configuration
+export interface FormRow {
   id: string;
   columns: FieldConfig[];
   RowWrapper?: React.ComponentType<RowWrapperProps>;
   wrapperProps?: Record<string, any>;
 }
 
+// Form configuration
 export interface FormConfig {
-  rows: Row[];
+  rows: FormRow[];
 }
 
-// Base form values type
-export interface BaseFormValues {
-  phone: string;
-  ssn: string;
-  country: string;
-  state?: string;
-  password?: string;
-  confirmPassword?: string;
+// Props for row wrapper components
+export interface RowWrapperProps {
+  children: React.ReactNode;
+  className?: string;
 }
 
-// Extended form values type
-export type FormValues = BaseFormValues & {
-  [key: string]: string | string[] | any[] | undefined;
+// Props for field components
+export interface FieldProps {
+  config: FieldConfig;
+  value: any;
+  onChange: (value: any) => void;
+  error?: string;
 }
 
-// Base schema
-const baseSchemaShape = {
-  phone: z.string(),
-  ssn: z.string(),
-  country: z.string(),
-  state: z.string().optional(),
-  password: z.string().optional(),
-  confirmPassword: z.string().optional()
-} as const;
-
-export const baseSchema = z.object(baseSchemaShape);
-export type BaseSchema = typeof baseSchema;
-
-// Type for the complete schema
-export type FormSchema = z.ZodType<FormValues>;
-
-// Helper to create a schema that matches FormValues
-export const createValidationSchema = (schema: BaseSchema, extraFields: Record<string, z.ZodTypeAny>) => {
-  const extendedSchema = z.object({
-    ...schema.shape,
-    ...extraFields
-  });
-  return extendedSchema.passthrough() as FormSchema;
-};
-
-// Internal field value type with support for arrays
-export type FieldValue = {
-  masked: string;
-  raw: string;
-} | {
-  masked: any[];
-  raw: any[];
+// Array field operations
+export interface ArrayFieldOperations {
+  append: (value: any) => void;
+  prepend: (value: any) => void;
+  remove: (index: number) => void;
+  swap: (indexA: number, indexB: number) => void;
+  move: (from: number, to: number) => void;
+  insert: (index: number, value: any) => void;
 }
 
-// Enhanced display state with array support
-export interface DisplayState {
-  [key: string]: FieldValue;
+// Options for setValue
+export interface SetValueOptions {
+  shouldDirty?: boolean;
+  shouldTouch?: boolean;
+  shouldValidate?: boolean;
 }
 
-// Field error type
-export interface FieldError {
-  type: string;
-  message?: string;
-}
-
-// Enhanced field state
-export interface FieldState {
-  isDirty: boolean;
-  isTouched: boolean;
-  isValid: boolean;
-  error?: FieldError;
+// Options for form reset
+export interface FormResetOptions {
+  keepErrors?: boolean;
+  keepDirty?: boolean;
+  keepValues?: boolean;
+  keepIsSubmitted?: boolean;
+  keepTouched?: boolean;
+  keepIsValid?: boolean;
+  keepSubmitCount?: boolean;
 }
 
 // Enhanced form state
@@ -159,58 +160,15 @@ export interface EnhancedFormState {
   validatingFields: Record<string, boolean>;
 }
 
-// Field props with array support
-export interface FieldProps {
-  config: FieldConfig;
-  value: string | any[];
-  onChange: (value: any) => void;
-  error?: string;
-}
+// Type guard functions
+export const isTextFieldConfig = (config: FieldConfig): config is TextFieldConfig => 
+  config.type === 'text';
 
-// Array field operations
-export interface ArrayFieldOperations {
-  append: (value: any) => void;
-  prepend: (value: any) => void;
-  insert: (index: number, value: any) => void;
-  remove: (index: number) => void;
-  swap: (indexA: number, indexB: number) => void;
-  move: (from: number, to: number) => void;
-}
+export const isSelectFieldConfig = (config: FieldConfig): config is SelectFieldConfig => 
+  config.type === 'select';
 
-// Enhanced setValue options
-export interface SetValueOptions {
-  shouldValidate?: boolean;
-  shouldDirty?: boolean;
-  shouldTouch?: boolean;
-}
+export const isArrayFieldConfig = (config: FieldConfig): config is ArrayFieldConfig => 
+  config.type === 'array';
 
-// Watch options
-export interface WatchOptions {
-  defaultValue?: any;
-  disabled?: boolean;
-  exact?: boolean;
-}
-
-// Validation error
-export interface ValidationError {
-  path: string[];
-  message: string;
-}
-
-// Validation result
-export interface ValidationResult {
-  isValid: boolean;
-  errors: ValidationError[];
-}
-
-// Form reset options
-export type FormResetOptions = {
-  keepErrors?: boolean;
-  keepDirty?: boolean;
-  keepValues?: boolean;
-  keepDefaultValues?: boolean;
-  keepIsSubmitted?: boolean;
-  keepTouched?: boolean;
-  keepIsValid?: boolean;
-  keepSubmitCount?: boolean;
-};
+export const isChipFieldConfig = (config: FieldConfig): config is ChipFieldConfig => 
+  config.type === 'chip';

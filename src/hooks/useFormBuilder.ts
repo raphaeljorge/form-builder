@@ -15,8 +15,18 @@ import {
   FieldError
 } from '../types/form';
 import * as z from 'zod';
-import { useCallback, useMemo, useState, ReactNode, useEffect, createElement, Fragment } from 'react';
+import { useCallback, useMemo, useState, ReactNode, useEffect, createElement, Fragment, useRef } from 'react';
 
+/**
+ * Applies a mask to a string value
+ * 
+ * @param value - The value to mask
+ * @param mask - The mask pattern (# for digits)
+ * @returns The masked value
+ * 
+ * @example
+ * applyMask('1234567890', '(###) ###-####') // Returns '(123) 456-7890'
+ */
 const applyMask = (value: string | any[] | undefined, mask?: string): string => {
   if (!value || !mask || Array.isArray(value)) return '';
   
@@ -38,11 +48,19 @@ const applyMask = (value: string | any[] | undefined, mask?: string): string => 
   return result;
 };
 
+/**
+ * Form state data interface
+ */
 export interface FormStateData {
+  /** Raw form values */
   raw: FormValues;
+  /** Masked form values (for display) */
   masked: Record<string, string | any[]>;
 }
 
+/**
+ * Default form values
+ */
 const DEFAULT_VALUES: BaseFormValues = {
   phone: '',
   ssn: '',
@@ -52,7 +70,12 @@ const DEFAULT_VALUES: BaseFormValues = {
   confirmPassword: ''
 };
 
-// Initialize array fields based on config
+/**
+ * Initialize array fields based on form configuration
+ * 
+ * @param config - The form configuration
+ * @returns An object with initialized array fields
+ */
 const initializeArrayFields = (config: FormConfig) => {
   const arrayFields: Record<string, any[]> = {};
   
@@ -67,7 +90,39 @@ const initializeArrayFields = (config: FormConfig) => {
   return arrayFields;
 };
 
-// Validate a single field
+/**
+ * Deep clone an object
+ * 
+ * @param obj - The object to clone
+ * @returns A deep clone of the object
+ */
+const deepClone = <T>(obj: T): T => {
+  if (obj === null || typeof obj !== 'object') {
+    return obj;
+  }
+
+  if (Array.isArray(obj)) {
+    return obj.map(item => deepClone(item)) as unknown as T;
+  }
+
+  const clone = {} as T;
+  Object.keys(obj as object).forEach(key => {
+    (clone as any)[key] = deepClone((obj as any)[key]);
+  });
+
+  return clone;
+};
+
+/**
+ * Validates a single field
+ * 
+ * @param fieldId - The ID of the field to validate
+ * @param value - The value to validate
+ * @param config - The form configuration
+ * @param formValues - The current form values
+ * @param updatedValues - Any updated values not yet in formValues
+ * @returns An object with validation result
+ */
 const validateSingleField = (
   fieldId: string,
   value: any,
@@ -182,41 +237,79 @@ const validateSingleField = (
   return { isValid: true };
 };
 
+/**
+ * Options for the useFormBuilder hook
+ */
 export interface UseFormBuilderOptions {
+  /** Form validation mode */
   mode?: 'onSubmit' | 'onChange' | 'onBlur' | 'onTouched' | 'all';
+  /** Default form values */
   defaultValues?: Partial<FormValues>;
+  /** Whether to unregister fields when they are removed */
   shouldUnregister?: boolean;
+  /** How to display validation errors */
   criteriaMode?: 'firstError' | 'all';
+  /** Whether to focus the first field with an error after validation */
   shouldFocusError?: boolean;
+  /** Delay before showing validation errors */
   delayError?: number;
+  /** Additional context for validation */
   context?: any;
 }
 
+/**
+ * Return type for the useFormBuilder hook
+ */
 export type UseFormBuilderReturn = {
+  /** Form state data */
   state: FormStateData;
+  /** Enhanced form state */
   formState: EnhancedFormState;
+  /** Reset the form */
   resetForm: (options?: FormResetOptions) => void;
+  /** Set focus to a field */
   setFieldFocus: (name: keyof FormValues) => void;
+  /** Validate a field */
   validateField: (name: keyof FormValues, value?: any) => Promise<boolean>;
+  /** Array field operations */
   arrayFields: Record<string, ArrayFieldOperations>;
+  /** Set a field value */
   setValue: (name: keyof FormValues, value: any, options?: SetValueOptions) => void;
+  /** Watch a field value */
   watch: (name?: keyof FormValues) => any;
+  /** Handle form submission */
   handleSubmit: (onSubmit: (data: FormValues) => void) => (e: React.FormEvent) => void;
+  /** Form control object */
   control: any;
+  /** Get form values */
   getValues: (name?: keyof FormValues) => any;
+  /** Form component */
   Form: React.FC<{ children: ReactNode }>;
 };
 
+/**
+ * Custom form builder hook that uses @tanstack/react-form
+ * 
+ * @param config - The form configuration
+ * @param options - Options for the form builder
+ * @returns Form builder API
+ * 
+ * @example
+ * const { state, formState, setValue, watch, handleSubmit } = useFormBuilder(config);
+ */
 export const useFormBuilder = (
   config: FormConfig,
   options: UseFormBuilderOptions = {}
 ): UseFormBuilderReturn => {
   // Initialize default values with array fields
-  const initialValues = {
+  const initialValues = useMemo(() => ({
     ...DEFAULT_VALUES,
     ...initializeArrayFields(config),
     ...options.defaultValues
-  } as FormValues;
+  } as FormValues), [config, options.defaultValues]);
+
+  // Keep a reference to the original default values
+  const defaultValuesRef = useRef(deepClone(initialValues));
 
   // Use state to track form values and state
   const [formValues, setFormValues] = useState<FormValues>(initialValues);
@@ -244,7 +337,13 @@ export const useFormBuilder = (
     }
   });
 
-  // Single field validation
+  /**
+   * Validate a single field
+   * 
+   * @param name - The name of the field to validate
+   * @param value - The value to validate (optional)
+   * @returns A promise that resolves to a boolean indicating if the field is valid
+   */
   const validateField = useCallback(async (name: keyof FormValues, value?: any) => {
     setFormState(prev => ({
       ...prev,
@@ -460,20 +559,48 @@ export const useFormBuilder = (
     return masked;
   }, [formValues, config]);
 
-  // Enhanced form reset with options
+  /**
+   * Reset the form to its initial state
+   * 
+   * @param options - Options for resetting the form
+   */
   const resetForm = useCallback((options?: FormResetOptions) => {
-    setFormValues(initialValues);
-    setFormState(prev => ({
-      ...prev,
-      isDirty: false,
-      dirtyFields: {},
-      isSubmitted: options?.keepIsSubmitted ? prev.isSubmitted : false,
-      touchedFields: {},
-      errors: options?.keepErrors ? prev.errors : {}
-    }));
-  }, [initialValues]);
+    // Create a new values object based on the options
+    const newValues = options?.keepValues 
+      ? { ...formValues } 
+      : deepClone(defaultValuesRef.current);
+    
+    // Update form values
+    setFormValues(newValues);
+    
+    // Update form state
+    setFormState(prev => {
+      const newState = {
+        ...prev,
+        isDirty: options?.keepDirty ? prev.isDirty : false,
+        dirtyFields: options?.keepDirty ? prev.dirtyFields : {},
+        isSubmitted: options?.keepIsSubmitted ? prev.isSubmitted : false,
+        isSubmitSuccessful: options?.keepIsSubmitted ? prev.isSubmitSuccessful : false,
+        submitCount: options?.keepSubmitCount ? prev.submitCount : 0,
+        touchedFields: options?.keepTouched ? prev.touchedFields : {},
+        errors: options?.keepErrors ? prev.errors : {},
+        isValid: options?.keepIsValid ? prev.isValid : true
+      };
+      
+      return newState;
+    });
+    
+    // Reset the form in TanStack Form
+    form.reset();
+  }, [formValues, form, defaultValuesRef]);
 
-  // Enhanced setValue with additional options
+  /**
+   * Set a field value
+   * 
+   * @param name - The name of the field
+   * @param value - The value to set
+   * @param options - Options for setting the value
+   */
   const setValue = useCallback((
     name: keyof FormValues,
     value: any,
@@ -523,7 +650,12 @@ export const useFormBuilder = (
     }
   }, [formValues, validateField]);
 
-  // Watch function to mimic react-hook-form's watch
+  /**
+   * Watch a field value
+   * 
+   * @param name - The name of the field to watch
+   * @returns The field value
+   */
   const watch = useCallback((name?: keyof FormValues) => {
     if (name) {
       return formValues[name];
@@ -531,7 +663,12 @@ export const useFormBuilder = (
     return formValues;
   }, [formValues]);
 
-  // Handle submit function
+  /**
+   * Handle form submission
+   * 
+   * @param onSubmit - The function to call when the form is submitted
+   * @returns A function that handles the form submission event
+   */
   const handleSubmit = useCallback((onSubmit: (data: FormValues) => void) => {
     return (e: React.FormEvent) => {
       e.preventDefault();
@@ -585,7 +722,11 @@ export const useFormBuilder = (
     };
   }, [config, formValues]);
 
-  // Set field focus
+  /**
+   * Set focus to a field
+   * 
+   * @param name - The name of the field to focus
+   */
   const setFieldFocus = useCallback((name: keyof FormValues) => {
     const element = document.getElementById(String(name));
     if (element) {
@@ -593,7 +734,12 @@ export const useFormBuilder = (
     }
   }, []);
 
-  // Get values
+  /**
+   * Get form values
+   * 
+   * @param name - The name of the field to get
+   * @returns The field value or all form values
+   */
   const getValues = useCallback((name?: keyof FormValues) => {
     if (name) {
       return formValues[name];
@@ -601,7 +747,9 @@ export const useFormBuilder = (
     return formValues;
   }, [formValues]);
 
-  // Create a Form component to provide context
+  /**
+   * Create a Form component to provide context
+   */
   const Form = useCallback(({ children }: { children: ReactNode }) => {
     return createElement(Fragment, null, children);
   }, []);
