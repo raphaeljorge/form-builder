@@ -1,9 +1,9 @@
 import React, { memo, useCallback, useMemo } from 'react';
-import { useFormContext } from 'react-hook-form';
 import type { FormConfig, FormValues, RowWrapperProps } from '../types/form';
 import { DefaultRowWrapper } from './form/DefaultRowWrapper';
 import { FormRow } from './form/FormRow';
 import { FormActions } from './form/FormActions';
+import { useFormContext } from '../context/FormContext';
 
 interface EnhancedFormBuilderProps<T extends FormConfig> {
   config: T;
@@ -17,11 +17,15 @@ export const EnhancedFormBuilder = memo(<T extends FormConfig>({
   onSubmit,
   RowWrapper = DefaultRowWrapper,
 }: EnhancedFormBuilderProps<T>) => {
-  const { handleSubmit, formState: { isSubmitting, isDirty }, reset } = useFormContext<FormValues>();
+  const {
+    handleSubmit,
+    formState: { isSubmitting, isDirty },
+    resetForm
+  } = useFormContext();
 
   const handleReset = useCallback(() => {
-    reset();
-  }, [reset]);
+    resetForm();
+  }, [resetForm]);
 
   const handleFormSubmit = useCallback(
     (data: FormValues) => {

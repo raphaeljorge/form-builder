@@ -1,5 +1,4 @@
 import { ReactNode } from 'react';
-import { FieldError, FormState as RHFFormState } from 'react-hook-form';
 import * as z from 'zod';
 
 export interface DebounceConfig {
@@ -129,6 +128,12 @@ export interface DisplayState {
   [key: string]: FieldValue;
 }
 
+// Field error type
+export interface FieldError {
+  type: string;
+  message?: string;
+}
+
 // Enhanced field state
 export interface FieldState {
   isDirty: boolean;
@@ -138,7 +143,7 @@ export interface FieldState {
 }
 
 // Enhanced form state
-export interface EnhancedFormState extends RHFFormState<FormValues> {
+export interface EnhancedFormState {
   isDirty: boolean;
   dirtyFields: Record<string, boolean>;
   isSubmitted: boolean;
@@ -149,6 +154,9 @@ export interface EnhancedFormState extends RHFFormState<FormValues> {
   touchedFields: Record<string, boolean>;
   errors: Record<string, FieldError>;
   isValid: boolean;
+  isLoading: boolean;
+  disabled: boolean;
+  validatingFields: Record<string, boolean>;
 }
 
 // Field props with array support

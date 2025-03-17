@@ -63,7 +63,8 @@ export const ChipField = React.memo<ChipFieldProps>(({
   // Memoize key down handler
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Backspace' && !inputValue && value.length > 0) {
-      onChange(value.slice(0, -1));
+      const newValue = value.slice(0, -1);
+      onChange(newValue);
       return;
     }
 
@@ -85,7 +86,8 @@ export const ChipField = React.memo<ChipFieldProps>(({
       e.preventDefault();
       const newChip = suggestions[highlightedIndex];
       if (!value.includes(newChip) && (!config.maxItems || value.length < config.maxItems)) {
-        onChange([...value, newChip]);
+        const newValue = [...value, newChip];
+        onChange(newValue);
         setInputValue('');
         setIsOpen(false);
         setHighlightedIndex(-1);
@@ -103,7 +105,8 @@ export const ChipField = React.memo<ChipFieldProps>(({
   // Memoize add chip handler
   const addChip = useCallback((chip: string) => {
     if (!value.includes(chip) && (!config.maxItems || value.length < config.maxItems)) {
-      onChange([...value, chip]);
+      const newValue = [...value, chip];
+      onChange(newValue);
       setInputValue('');
       setIsOpen(false);
       setHighlightedIndex(-1);
@@ -113,7 +116,8 @@ export const ChipField = React.memo<ChipFieldProps>(({
 
   // Memoize remove chip handler
   const removeChip = useCallback((chipToRemove: string) => {
-    onChange(value.filter(chip => chip !== chipToRemove));
+    const newValue = value.filter(chip => chip !== chipToRemove);
+    onChange(newValue);
   }, [value, onChange]);
 
   // Memoize computed values

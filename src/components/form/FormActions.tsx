@@ -6,28 +6,38 @@ interface FormActionsProps {
   isDirty: boolean;
 }
 
-export const FormActions = memo<FormActionsProps>(({ 
-  onReset, 
-  isSubmitting, 
-  isDirty 
-}) => (
-  <div className="flex justify-end gap-4 mt-6">
-    <button
-      type="button"
-      onClick={onReset}
-      disabled={!isDirty || isSubmitting}
-      className="px-4 py-2 text-gray-600 border border-gray-300 rounded hover:bg-gray-50 disabled:opacity-50"
-    >
-      Reset
-    </button>
-    <button
-      type="submit"
-      disabled={isSubmitting}
-      className="px-4 py-2 text-white bg-blue-600 rounded hover:bg-blue-700 disabled:opacity-50"
-    >
-      Submit
-    </button>
-  </div>
-));
+export const FormActions = memo<FormActionsProps>(({
+  onReset,
+  isSubmitting,
+  isDirty
+}) => {
+  return (
+    <div className="flex justify-end space-x-4 mt-8">
+      <button
+        type="button"
+        onClick={onReset}
+        disabled={isSubmitting || !isDirty}
+        className={`px-4 py-2 rounded-md ${
+          isDirty
+            ? 'bg-gray-200 hover:bg-gray-300 text-gray-800'
+            : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+        }`}
+      >
+        Reset
+      </button>
+      <button
+        type="submit"
+        disabled={isSubmitting}
+        className={`px-4 py-2 rounded-md ${
+          isSubmitting
+            ? 'bg-blue-300 text-white cursor-wait'
+            : 'bg-blue-500 hover:bg-blue-600 text-white'
+        }`}
+      >
+        {isSubmitting ? 'Submitting...' : 'Submit'}
+      </button>
+    </div>
+  );
+});
 
 FormActions.displayName = 'FormActions';

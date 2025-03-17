@@ -1,7 +1,7 @@
 import React from 'react';
 import { ArrayFieldConfig, TextFieldConfig } from '../../types/form';
 import { TextField } from './TextField';
-import { useFormContext } from 'react-hook-form';
+import { useFormContext } from '../../context/FormContext';
 
 interface ArrayFieldProps {
   config: ArrayFieldConfig;

@@ -1,8 +1,8 @@
-import React, { memo, useMemo } from 'react';
+import React, { memo, useMemo, useEffect } from 'react';
 import { EnhancedFormBuilder } from './components/EnhancedFormBuilder';
 import { formConfig } from './config/formConfig';
 import type { RowWrapperProps, FormValues } from './types/form';
-import { FormProvider, useFormContext } from 'react-hook-form';
+import { FormProvider, useFormContext } from './context/FormContext';
 import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
 import { submitFormData } from './services/api';
 import { useFormBuilder, UseFormBuilderReturn } from './hooks/useFormBuilder';
@@ -48,8 +48,7 @@ const getDefaultValues = () => {
 };
 
 const ArrayFieldControls = () => {
-  const methods = useFormContext() as UseFormBuilderReturn;
-  const { arrayFields, setValue, getValues } = methods;
+  const { arrayFields, setValue, getValues } = useFormContext();
 
   const handleAddEmail = () => {
     const currentEmails = (getValues('emails') || []) as string[];
@@ -137,13 +136,7 @@ const ArrayFieldControls = () => {
 };
 
 const FormControls = () => {
-  const methods = useFormContext() as UseFormBuilderReturn;
-  const { resetForm, setFieldFocus, validateField, getFieldState } = methods;
-
-  // Example of field state tracking
-  const phoneState = getFieldState('phone');
-  const ssnState = getFieldState('ssn');
-  const countryState = getFieldState('country');
+  const { resetForm, setFieldFocus, validateField } = useFormContext();
 
   // Reset options examples
   const resetOptions = {
@@ -236,45 +229,13 @@ const FormControls = () => {
             ))}
           </div>
         </div>
-
-        {/* Field State Display */}
-        <div>
-          <h3 className="text-lg font-medium mb-2">Field States:</h3>
-          <div className="grid grid-cols-3 gap-4">
-            <div className="p-3 bg-gray-50 rounded">
-              <h4 className="font-medium mb-2">Phone Field:</h4>
-              <div className="space-y-1 text-sm">
-                <p>Touched: {phoneState.isTouched ? 'Yes' : 'No'}</p>
-                <p>Dirty: {phoneState.isDirty ? 'Yes' : 'No'}</p>
-                <p>Error: {phoneState.error ? phoneState.error.message : 'None'}</p>
-              </div>
-            </div>
-            <div className="p-3 bg-gray-50 rounded">
-              <h4 className="font-medium mb-2">SSN Field:</h4>
-              <div className="space-y-1 text-sm">
-                <p>Touched: {ssnState.isTouched ? 'Yes' : 'No'}</p>
-                <p>Dirty: {ssnState.isDirty ? 'Yes' : 'No'}</p>
-                <p>Error: {ssnState.error ? ssnState.error.message : 'None'}</p>
-              </div>
-            </div>
-            <div className="p-3 bg-gray-50 rounded">
-              <h4 className="font-medium mb-2">Country Field:</h4>
-              <div className="space-y-1 text-sm">
-                <p>Touched: {countryState.isTouched ? 'Yes' : 'No'}</p>
-                <p>Dirty: {countryState.isDirty ? 'Yes' : 'No'}</p>
-                <p>Error: {countryState.error ? countryState.error.message : 'None'}</p>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );
 };
 
 const FormStateDisplay = () => {
-  const methods = useFormContext() as UseFormBuilderReturn;
-  const { state, formState } = methods;
+  const { state, formState } = useFormContext();
   const { raw, masked } = state;
 
   // Track form state
@@ -405,61 +366,19 @@ const FormWithQuery = () => {
   // Memoize default values
   const defaultValues = useMemo(() => getDefaultValues(), []);
 
-  const methods = useFormBuilder(config, {
-    mode: 'onChange',
-    reValidateMode: 'onBlur',
-    criteriaMode: 'all',
-    shouldFocusError: true,
+  // Create form instance
+  const formMethods = useFormBuilder(config, {
     defaultValues
   });
-
-  // Initialize array fields if empty
-  React.useEffect(() => {
-    const { emails, addresses } = methods.getValues();
-    
-    if (!emails || emails.length === 0) {
-      methods.setValue('emails', [''], {
-        shouldDirty: true,
-        shouldTouch: true,
-        shouldValidate: true
-      });
-    }
-    
-    if (!addresses || addresses.length === 0) {
-      methods.setValue('addresses', [''], {
-        shouldDirty: true,
-        shouldTouch: true,
-        shouldValidate: true
-      });
-    }
-  }, [methods]);
 
   const mutation = useMutation({
     mutationFn: submitFormData,
     onSuccess: (response) => {
       console.log('Form submitted successfully:', response.data);
-      methods.reset();
+      formMethods.resetForm();
     },
     onError: (error: Error) => {
-      try {
-        const errors = JSON.parse(error.message) as Record<string, string>;
-        Object.entries(errors).forEach(([key, message]) => {
-          // Check if key exists in FormValues type
-          const validFields = ['phone', 'ssn', 'country', 'emails', 'addresses', 'skills'] as const;
-          type ValidField = typeof validFields[number];
-          
-          if (validFields.includes(key as ValidField)) {
-            methods.setError(key as ValidField, { message });
-          }
-        });
-      } catch {
-        console.error('Error submitting form:', error);
-        // Set a generic error message
-        methods.setError('root', {
-          type: 'submitError',
-          message: 'Failed to submit form. Please try again.'
-        });
-      }
+      console.error('Error submitting form:', error);
     }
   });
 
@@ -475,12 +394,13 @@ const FormWithQuery = () => {
   };
 
   return (
-    <FormProvider {...methods}>
-      <div className="min-h-screen bg-gray-50 py-12">
-        <div className="max-w-4xl mx-auto">          
+    <div className="min-h-screen bg-gray-50 py-12">
+      <div className="max-w-4xl mx-auto">          
+        <FormProvider formMethods={formMethods}>
           <EnhancedFormBuilder
             config={config}
             onSubmit={handleSubmit}
+            defaultValues={defaultValues}
           />
 
           {mutation.isSuccess && (
@@ -489,7 +409,7 @@ const FormWithQuery = () => {
             </div>
           )}
 
-          {mutation.isError && !methods.formState.errors && (
+          {mutation.isError && (
             <div className="mt-4 p-4 bg-red-100 text-red-700 rounded">
               An error occurred while submitting the form.
             </div>
@@ -498,9 +418,9 @@ const FormWithQuery = () => {
           <FormControls />
           <ArrayFieldControls />
           <FormStateDisplay />
-        </div>
+        </FormProvider>
       </div>
-    </FormProvider>
+    </div>
   );
 };
 
