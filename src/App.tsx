@@ -604,7 +604,15 @@ const FormWithQuery: React.FC<FormWithQueryProps> = ({
     mutationFn: submitFormData,
     onSuccess: (response) => {
       console.log('Form submitted successfully:', response.data);
-      formMethods.resetForm();
+      
+      // Update form state to reflect successful submission
+      formMethods.setFormState(prev => ({
+        ...prev,
+        isSubmitted: true,
+        isSubmitSuccessful: true,
+        isSubmitting: false
+      }));
+      
       setIsSubmitting(false);
     },
     onError: (error: Error) => {
@@ -613,9 +621,16 @@ const FormWithQuery: React.FC<FormWithQueryProps> = ({
     }
   });
   const handleSubmit = (data: FormValues) => {
-    // Set loading state
+    // Set loading state and mark form as submitted
     setIsSubmitting(true);
     formMethods.setLoading(true);
+    
+    // Explicitly mark the form as submitted
+    formMethods.setFormState(prev => ({
+      ...prev,
+      isSubmitted: true,
+      submitCount: prev.submitCount + 1
+    }));
     
     // Apply any external loading states to specific fields
     Object.entries(loadingFields).forEach(([fieldId, isLoading]) => {

@@ -153,15 +153,37 @@ const validateSingleField = (
   
   // Required field validation
   if (fieldConfig.required) {
-    // For select fields, we need to be more careful about what constitutes an empty value
-    // Values like 0, false, etc. are valid selections
-    const isEmptyValue = value === undefined || value === null || value === '';
-    
-    if (isEmptyValue) {
-      return {
-        isValid: false,
-        error: fieldConfig.validation?.message || 'This field is required'
-      };
+    // For select fields, we need special handling
+    if (fieldConfig.type === 'select') {
+      // Only consider it empty if it's explicitly undefined, null, or empty string
+      // Any other value (including 0, false, etc.) is considered valid
+      const isEmptyValue = value === undefined || value === null || value === '';
+      
+      // For select fields, check if there's a default value in the form values
+      // If there is, consider it valid regardless of the current value
+      const hasDefaultValue = formValues[fieldConfig.id] !== undefined &&
+                             formValues[fieldConfig.id] !== null &&
+                             formValues[fieldConfig.id] !== '';
+      
+      if (isEmptyValue && !hasDefaultValue) {
+        return {
+          isValid: false,
+          error: fieldConfig.validation?.message || 'Please select an option'
+        };
+      }
+      
+      // If we get here, the select field is valid
+      return { isValid: true };
+    } else {
+      // For other field types
+      const isEmptyValue = value === undefined || value === null || value === '';
+      
+      if (isEmptyValue) {
+        return {
+          isValid: false,
+          error: fieldConfig.validation?.message || 'This field is required'
+        };
+      }
     }
   }
   
@@ -281,6 +303,8 @@ export interface UseFormBuilderOptions {
  * Return type for the useFormBuilder hook
  */
 export type UseFormBuilderReturn = {
+  /** Set form state directly */
+  setFormState: (updater: (prev: EnhancedFormState) => EnhancedFormState) => void;
   /** Form state data */
   state: FormStateData;
   /** Enhanced form state */
@@ -416,6 +440,40 @@ export const useFormBuilder = (
         });
       });
     }
+    
+    // Ensure select fields with default values are properly handled
+    config.rows.forEach(row => {
+      row.columns.forEach(field => {
+        if (field.type === 'select') {
+          // If there's a default value in options, use it
+          if (options.defaultValues && options.defaultValues[field.id] !== undefined) {
+            values[field.id] = options.defaultValues[field.id];
+          }
+          // If there's no default value but there are options, use the first option's value
+          else if (field.options && field.options.length > 0 && !field.placeholder) {
+            values[field.id] = field.options[0].value;
+          }
+        }
+      });
+    });
+    
+    // Pre-validate select fields with default values to clear any errors
+    config.rows.forEach(row => {
+      row.columns.forEach(field => {
+        if (field.type === 'select') {
+          // For select fields, if there's a value, mark it as pre-validated
+          if (values[field.id] !== undefined && values[field.id] !== null && values[field.id] !== '') {
+            // Mark this field as pre-validated to avoid validation errors
+            values[`__prevalidated_${field.id}`] = true;
+          }
+          // If there's no value but there are options, use the first option's value
+          else if (field.options && field.options.length > 0 && !field.placeholder) {
+            values[field.id] = field.options[0].value;
+            values[`__prevalidated_${field.id}`] = true;
+          }
+        }
+      });
+    });
     
     return values;
   }, [config, options.defaultValues, options.enableFieldTransformation]);
@@ -558,8 +616,13 @@ export const useFormBuilder = (
       }
     }));
     
-    // Skip validation for fields that shouldn't be displayed
+    // Get the field configuration
     const fieldConfig = config.rows.flatMap(row => row.columns).find(field => field.id === name);
+    
+    // If value is provided, use it for validation, otherwise use the current form value
+    const valueToValidate = value !== undefined ? value : formValues[name];
+    
+    // Skip validation for fields that shouldn't be displayed
     if (fieldConfig?.condition && !shouldDisplayField(name)) {
       setFormState(prev => {
         const newErrors = { ...prev.errors };
@@ -580,10 +643,52 @@ export const useFormBuilder = (
       return true;
     }
     
-    // Use our custom validation function
-    // If value is provided, use it for validation, otherwise use the current form value
-    const valueToValidate = value !== undefined ? value : formValues[name];
+    // Check if this is a pre-validated field
+    if (formValues[`__prevalidated_${name}`]) {
+      // Clear any existing errors for this field
+      setFormState(prev => {
+        const newErrors = { ...prev.errors };
+        delete newErrors[String(name)];
+        
+        return {
+          ...prev,
+          isValidating: false,
+          validatingFields: {
+            ...prev.validatingFields,
+            [name]: false
+          },
+          errors: newErrors,
+          isValid: Object.keys(newErrors).length === 0
+        };
+      });
+      
+      return true;
+    }
     
+    // Skip validation for select fields that already have a value
+    if (fieldConfig?.type === 'select' &&
+        valueToValidate !== undefined &&
+        valueToValidate !== null &&
+        valueToValidate !== '') {
+      // Clear any existing errors for this field
+      setFormState(prev => {
+        const newErrors = { ...prev.errors };
+        delete newErrors[String(name)];
+        
+        return {
+          ...prev,
+          isValidating: false,
+          validatingFields: {
+            ...prev.validatingFields,
+            [name]: false
+          },
+          errors: newErrors,
+          isValid: Object.keys(newErrors).length === 0
+        };
+      });
+      
+      return true;
+    }
     // Apply transformations if needed
     const transformedValue = options?.enableFieldTransformation === true
       ? transformField(name, valueToValidate, 'input')
@@ -856,8 +961,8 @@ export const useFormBuilder = (
    */
   const resetForm = useCallback((options?: FormResetOptions) => {
     // Create a new values object based on the options
-    const newValues = options?.keepValues 
-      ? { ...formValues } 
+    const newValues = options?.keepValues
+      ? { ...formValues }
       : deepClone(defaultValuesRef.current);
     
     // Update form values
@@ -964,11 +1069,38 @@ export const useFormBuilder = (
       }, 0);
     }
     
-    // Update form values
-    setFormValues(prev => ({
-      ...prev,
-      [name]: transformedValue
-    }));
+    // Check if this is a select field
+    const fieldConfig = config.rows.flatMap(row => row.columns).find(field => field.id === String(name));
+    const isSelectField = fieldConfig?.type === 'select';
+    const hasValue = transformedValue !== undefined && transformedValue !== null && transformedValue !== '';
+    
+    // Special handling for select fields with values
+    if (isSelectField && hasValue) {
+      // For select fields with values, mark them as pre-validated
+      setFormValues(prev => ({
+        ...prev,
+        [name]: transformedValue,
+        [`__prevalidated_${String(name)}`]: true
+      }));
+      
+      // Clear any validation errors for this field
+      setFormState(prev => {
+        const newErrors = { ...prev.errors };
+        delete newErrors[String(name)];
+        
+        return {
+          ...prev,
+          errors: newErrors,
+          isValid: Object.keys(newErrors).length === 0
+        };
+      });
+    } else {
+      // Normal update for other fields
+      setFormValues(prev => ({
+        ...prev,
+        [name]: transformedValue
+      }));
+    }
     
     if (options?.shouldDirty !== false) {
       setFormState(prev => ({
@@ -1070,6 +1202,7 @@ export const useFormBuilder = (
       },
       formState: mergedFormState,
       // Include all the methods from the current form
+      setFormState,
       resetForm,
       resetField,
       setFieldFocus,
@@ -1134,6 +1267,14 @@ export const useFormBuilder = (
     return async (e: React.FormEvent) => {
       e.preventDefault();
       
+      // Set form to submitting state and mark as submitted
+      setFormState(prev => ({
+        ...prev,
+        isSubmitting: true,
+        isSubmitted: true,
+        submitCount: prev.submitCount + 1
+      }));
+      
       // Only validate on submit if the mode is onSubmit, all, or not specified
       const shouldValidateOnSubmit =
         options.mode === undefined ||
@@ -1154,21 +1295,41 @@ export const useFormBuilder = (
               }, {} as FormValues)
             : formValues;
           
-          debouncedSubmit(submissionValues);
-          
-          setFormState(prev => ({
-            ...prev,
-            isSubmitting: false,
-            isSubmitSuccessful: true
-          }));
+          // Show loading state for a short time, then submit
+          setTimeout(async () => {
+            try {
+              // Call the submit function
+              await debouncedSubmit(submissionValues);
+              
+              // Set success state immediately
+              setFormState(prev => ({
+                ...prev,
+                isSubmitting: false,
+                isSubmitted: true,
+                isSubmitSuccessful: true
+              }));
+            } catch (error) {
+              // Handle errors
+              setTimeout(() => {
+                setFormState(prev => ({
+                  ...prev,
+                  isSubmitting: false,
+                  isSubmitSuccessful: false
+                }));
+              }, 300);
+            }
+          }, 100);
           
           return;
         } catch (error) {
-          setFormState(prev => ({
-            ...prev,
-            isSubmitting: false,
-            isSubmitSuccessful: false
-          }));
+          // Set error state after a short delay
+          setTimeout(() => {
+            setFormState(prev => ({
+              ...prev,
+              isSubmitting: false,
+              isSubmitSuccessful: false
+            }));
+          }, 300);
           return;
         }
       }
@@ -1188,23 +1349,34 @@ export const useFormBuilder = (
           const fieldValue = options?.enableFieldTransformation === true
             ? transformField(field.id as keyof FormValues, formValues[field.id], 'input')
             : formValues[field.id];
-            
-          // Validate the field
-          const result = validateSingleField(field.id, fieldValue, config, formValues);
-          if (!result.isValid && result.error) {
-            errors[field.id] = {
-              type: 'validation',
-              message: result.error
-            };
-            isValid = false;
+          
+          // Special handling for select fields with default values
+          const isSelectField = field.type === 'select';
+          const hasValue = fieldValue !== undefined && fieldValue !== null && fieldValue !== '';
+          
+          // Always skip validation for select fields that have any value
+          const shouldSkipValidation = isSelectField && hasValue;
+          
+          // Only validate if we shouldn't skip validation
+          if (!shouldSkipValidation) {
+            // Validate the field
+            const result = validateSingleField(field.id, fieldValue, config, formValues);
+            if (!result.isValid && result.error) {
+              errors[field.id] = {
+                type: 'validation',
+                message: result.error
+              };
+              isValid = false;
+            }
           }
         });
       });
-      
       setFormState(prev => ({
         ...prev,
         errors,
-        isValid
+        isValid,
+        // If there are validation errors, stop the submitting state
+        isSubmitting: isValid ? prev.isSubmitting : false
       }));
       
       // Perform form-level validation if provided
@@ -1226,7 +1398,9 @@ export const useFormBuilder = (
           setFormState(prev => ({
             ...prev,
             errors: newErrors,
-            isValid: false
+            isValid: false,
+            // If there are form-level validation errors, stop the submitting state
+            isSubmitting: false
           }));
           
           isValid = false;
@@ -1248,20 +1422,39 @@ export const useFormBuilder = (
               }, {} as FormValues)
             : formValues;
           
-          debouncedSubmit(submissionValues);
-          
-          // Update form state
-          setFormState(prev => ({
-            ...prev,
-            isSubmitting: false,
-            isSubmitSuccessful: true
-          }));
+          // Show loading state for a short time, then submit
+          setTimeout(async () => {
+            try {
+              // Call the submit function
+              await debouncedSubmit(submissionValues);
+              
+              // Set success state immediately
+              setFormState(prev => ({
+                ...prev,
+                isSubmitting: false,
+                isSubmitted: true,
+                isSubmitSuccessful: true
+              }));
+            } catch (error) {
+              // Handle errors
+              setTimeout(() => {
+                setFormState(prev => ({
+                  ...prev,
+                  isSubmitting: false,
+                  isSubmitSuccessful: false
+                }));
+              }, 300);
+            }
+          }, 100);
         } catch (error) {
-          setFormState(prev => ({
-            ...prev,
-            isSubmitting: false,
-            isSubmitSuccessful: false
-          }));
+          // Set error state after a short delay
+          setTimeout(() => {
+            setFormState(prev => ({
+              ...prev,
+              isSubmitting: false,
+              isSubmitSuccessful: false
+            }));
+          }, 300);
         }
       }
     };
@@ -1333,6 +1526,7 @@ export const useFormBuilder = (
       masked: maskedValues
     },
     formState: options?.enablePerformanceOptimizations === true ? memoizedFormState : formState,
+    setFormState, // Expose the setFormState function
     resetForm,
     resetField,
     setFieldFocus,

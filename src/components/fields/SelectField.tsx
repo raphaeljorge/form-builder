@@ -5,13 +5,21 @@ interface SelectFieldProps extends Omit<FieldProps, 'config'> {
   config: SelectFieldConfig;
 }
 
-export const SelectField = memo(({ 
-  config, 
+export const SelectField = memo(({
+  config,
   value,
   onChange,
   error,
   disabled
 }: SelectFieldProps) => {
+  // Force validation on mount to clear any errors
+  // for select fields with default values
+  React.useEffect(() => {
+    if (value !== undefined && value !== null && value !== '') {
+      // Trigger a change event with the current value to force validation
+      onChange(value);
+    }
+  }, []);
   return (
     <div className="w-full">
       {config.label && (
@@ -25,8 +33,12 @@ export const SelectField = memo(({
       )}
       <select
         id={config.id}
-        value={value || ''}
-        onChange={(e) => onChange(e.target.value)}
+        value={value === undefined || value === null ? '' : value}
+        onChange={(e) => {
+          // Ensure the value is properly set, even if it's the default option
+          const selectedValue = e.target.value;
+          onChange(selectedValue);
+        }}
         disabled={disabled}
         aria-invalid={error ? 'true' : 'false'}
         aria-describedby={error ? `${config.id}-error` : undefined}

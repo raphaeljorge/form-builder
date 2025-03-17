@@ -88,13 +88,32 @@ export const FormField = memo<FormFieldProps>(({
     transformField(fieldId, rawValue, 'output'),
     [transformField, fieldId, rawValue]
   );
-  const error = useMemo(() => formState.errors[fieldId]?.message, [formState.errors, fieldId]);
+  
+  // For select fields, if there's a value, we should never show an error
+  const error = useMemo(() => {
+    // Check if this is a select field with a value
+    const isSelectField = field.type === 'select';
+    const hasValue = value !== undefined && value !== null && value !== '';
+    
+    // If it's a select field with a value, never show an error
+    if (isSelectField && hasValue) {
+      return undefined;
+    }
+    
+    // Otherwise, show the error as normal
+    return formState.errors[fieldId]?.message;
+  }, [formState.errors, fieldId, field.type, value]);
   // Track loading state with a slight delay to prevent flashing
   const [showLoading, setShowLoading] = useState(false);
-  const isLoading = useMemo(() => formState.isLoading || formState.isSubmitting, [formState.isLoading, formState.isSubmitting]);
+  const isLoading = useMemo(() =>
+    formState.isLoading || formState.isSubmitting,
+    [formState.isLoading, formState.isSubmitting]
+  );
+  
+  // Set all fields to loading when form is submitting
   const isFieldLoading = useMemo(() =>
-    isLoading || formState.loadingFields?.[fieldId],
-    [isLoading, formState.loadingFields, fieldId]
+    isLoading || formState.loadingFields?.[fieldId] || formState.isSubmitting,
+    [isLoading, formState.loadingFields, fieldId, formState.isSubmitting]
   );
   
   // Add a small delay before showing loading state to prevent flashing
@@ -102,9 +121,12 @@ export const FormField = memo<FormFieldProps>(({
     let timeoutId: ReturnType<typeof setTimeout>;
     
     if (isFieldLoading) {
+      // Shorter delay when submitting to show loading state faster
+      const delay = formState.isSubmitting ? 50 : 100;
+      
       timeoutId = setTimeout(() => {
         setShowLoading(true);
-      }, 100); // Small delay to prevent flashing for quick operations
+      }, delay);
     } else {
       setShowLoading(false);
     }
@@ -128,12 +150,33 @@ export const FormField = memo<FormFieldProps>(({
   const handleChange = useCallback((newValue: any) => {
     // Apply input transformation before setting value
     const transformedValue = transformField(fieldId, newValue, 'input');
-    setValue(fieldId, transformedValue, {
-      shouldDirty: true,
-      shouldTouch: true,
-      shouldValidate: true
-    });
-  }, [fieldId, setValue]);
+    
+    // Special handling for select fields
+    if (field.type === 'select') {
+      // For select fields, we want to clear any validation errors
+      // when a value is selected
+      setValue(fieldId, transformedValue, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: false // Don't validate select fields on change
+      });
+      
+      // Manually clear any errors for this field
+      if (transformedValue !== undefined && transformedValue !== null && transformedValue !== '') {
+        // This will force a re-render without validation
+        setTimeout(() => {
+          validateField(fieldId, transformedValue);
+        }, 0);
+      }
+    } else {
+      // For other field types, use normal validation
+      setValue(fieldId, transformedValue, {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true
+      });
+    }
+  }, [fieldId, setValue, field.type, validateField]);
 
   // If field should not be displayed based on conditions, return null
   if (!shouldDisplay) {
