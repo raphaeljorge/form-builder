@@ -9,7 +9,8 @@ export const SelectField = memo(({
   config, 
   value,
   onChange,
-  error 
+  error,
+  disabled
 }: SelectFieldProps) => {
   return (
     <div className="w-full">
@@ -19,15 +20,20 @@ export const SelectField = memo(({
           className="block text-sm font-medium text-gray-700 mb-1"
         >
           {config.label}
+          {config.required && <span className="text-red-500 ml-1" aria-hidden="true">*</span>}
         </label>
       )}
       <select
         id={config.id}
-        value={value}
+        value={value || ''}
         onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        aria-invalid={error ? 'true' : 'false'}
+        aria-describedby={error ? `${config.id}-error` : undefined}
         className={`
           w-full px-3 py-2 border rounded-md shadow-sm
           focus:outline-none focus:ring-2 focus:ring-blue-500
+          ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}
           ${error 
             ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
             : 'border-gray-300 focus:border-blue-500'
@@ -46,7 +52,11 @@ export const SelectField = memo(({
         ))}
       </select>
       {error && (
-        <p className="mt-1 text-sm text-red-600">
+        <p 
+          id={`${config.id}-error`}
+          className="mt-1 text-sm text-red-600"
+          role="alert"
+        >
           {error}
         </p>
       )}

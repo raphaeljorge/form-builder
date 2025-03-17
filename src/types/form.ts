@@ -48,6 +48,15 @@ export interface BaseFieldConfig {
     pattern?: string;
     message?: string;
     custom?: (value: string, formValues: FormValues) => boolean | string;
+    deps?: Array<keyof FormValues>; // Fields this validation depends on
+  };
+  condition?: {
+    dependsOn: Array<keyof FormValues>; // Fields this condition depends on
+    shouldDisplay: (values: FormValues) => boolean; // Function to determine if field should be displayed
+  };
+  transform?: {
+    input?: (value: any) => any; // Transform value before storing in form state
+    output?: (value: any) => any; // Transform value before returning from form state
   };
 }
 
@@ -72,7 +81,7 @@ export interface SelectFieldConfig extends BaseFieldConfig {
 // Array field configuration
 export interface ArrayFieldConfig extends BaseFieldConfig {
   type: 'array';
-  template: TextFieldConfig;
+  template: TextFieldConfig | ((index: number) => TextFieldConfig); // Support for dynamic templates
   minItems?: number;
   maxItems?: number;
 }
@@ -113,6 +122,7 @@ export interface FieldProps {
   value: any;
   onChange: (value: any) => void;
   error?: string;
+  disabled?: boolean;
 }
 
 // Array field operations
@@ -130,6 +140,32 @@ export interface SetValueOptions {
   shouldDirty?: boolean;
   shouldTouch?: boolean;
   shouldValidate?: boolean;
+  enableFieldTransformation?: boolean;
+  enableAutomaticDependencyRevalidation?: boolean;
+  enableFieldLevelDirtyChecking?: boolean;
+  /** Validation mode for this specific setValue call */
+  mode?: 'onSubmit' | 'onChange' | 'onBlur' | 'onTouched' | 'all' | 'none';
+}
+
+// Field transformation interface
+export interface FieldTransformation {
+  input?: (value: any) => any;
+  output?: (value: any) => any;
+}
+
+// Field condition interface
+export interface FieldCondition {
+  dependsOn: Array<keyof FormValues>;
+  shouldDisplay: (values: FormValues) => boolean;
+}
+
+// Field reset options
+export interface FieldResetOptions {
+  keepError?: boolean;
+  keepDirty?: boolean;
+  keepValue?: boolean;
+  keepTouched?: boolean;
+  enableFieldLevelDirtyChecking?: boolean;
 }
 
 // Options for form reset
@@ -158,6 +194,7 @@ export interface EnhancedFormState {
   isLoading: boolean;
   disabled: boolean;
   validatingFields: Record<string, boolean>;
+  loadingFields?: Record<string, boolean>;
 }
 
 // Type guard functions

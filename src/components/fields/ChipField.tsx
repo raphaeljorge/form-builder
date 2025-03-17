@@ -6,13 +6,15 @@ interface ChipFieldProps {
   value: string[];
   onChange: (value: string[]) => void;
   error?: string;
+  disabled?: boolean;
 }
 
 export const ChipField = React.memo<ChipFieldProps>(({
   config,
   value = [],
   onChange,
-  error
+  error,
+  disabled
 }) => {
   const [inputValue, setInputValue] = useState('');
   const [isOpen, setIsOpen] = useState(false);
@@ -179,12 +181,12 @@ export const ChipField = React.memo<ChipFieldProps>(({
             type="text"
             className={`w-full px-3 py-2 border rounded-md bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
               error ? 'border-red-500' : 'border-gray-300'
-            }`}
+            } ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}`}
             placeholder={!isMaxItemsReached ? config.placeholder : ''}
             value={inputValue}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
-            disabled={isMaxItemsReached}
+            disabled={disabled || isMaxItemsReached}
             role="combobox"
             aria-expanded={isOpen}
             aria-autocomplete="list"
@@ -196,7 +198,7 @@ export const ChipField = React.memo<ChipFieldProps>(({
             aria-describedby={error ? `${fieldId}-error` : undefined}
           />
           {/* Suggestions dropdown */}
-          {isOpen && suggestions.length > 0 && (
+          {isOpen && suggestions.length > 0 && !disabled && (
             <div
               ref={suggestionsRef}
               id={listboxId}
@@ -239,14 +241,16 @@ export const ChipField = React.memo<ChipFieldProps>(({
                 className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm group hover:bg-blue-200 transition-colors"
               >
                 <span>{chip}</span>
-                <button
-                  type="button"
-                  onClick={() => removeChip(chip, index)}
-                  className="text-blue-600 hover:text-blue-800 focus:outline-none opacity-75 group-hover:opacity-100"
-                  aria-label={`Remove ${chip}`}
-                >
-                  ×
-                </button>
+                {!disabled && (
+                  <button
+                    type="button"
+                    onClick={() => removeChip(chip, index)}
+                    className="text-blue-600 hover:text-blue-800 focus:outline-none opacity-75 group-hover:opacity-100"
+                    aria-label={`Remove ${chip}`}
+                  >
+                    ×
+                  </button>
+                )}
               </div>
             ))}
           </div>

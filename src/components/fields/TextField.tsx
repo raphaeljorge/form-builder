@@ -31,7 +31,8 @@ export const TextField = memo(({
   config, 
   value,
   onChange,
-  error 
+  error,
+  disabled
 }: TextFieldProps) => {
   const [displayValue, setDisplayValue] = useState('');
 
@@ -76,6 +77,7 @@ export const TextField = memo(({
           className="block text-sm font-medium text-gray-700 mb-1"
         >
           {config.label}
+          {config.required && <span className="text-red-500 ml-1" aria-hidden="true">*</span>}
         </label>
       )}
       <input
@@ -84,9 +86,13 @@ export const TextField = memo(({
         value={displayValue}
         onChange={handleChange}
         placeholder={config.placeholder}
+        disabled={disabled}
+        aria-invalid={error ? 'true' : 'false'}
+        aria-describedby={error ? `${config.id}-error` : undefined}
         className={`
           w-full px-3 py-2 border rounded-md shadow-sm
           focus:outline-none focus:ring-2 focus:ring-blue-500
+          ${disabled ? 'bg-gray-100 cursor-not-allowed' : ''}
           ${error 
             ? 'border-red-500 focus:border-red-500 focus:ring-red-500' 
             : 'border-gray-300 focus:border-blue-500'
@@ -94,7 +100,11 @@ export const TextField = memo(({
         `}
       />
       {error && (
-        <p className="mt-1 text-sm text-red-600">
+        <p 
+          id={`${config.id}-error`}
+          className="mt-1 text-sm text-red-600"
+          role="alert"
+        >
           {error}
         </p>
       )}

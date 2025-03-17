@@ -8,13 +8,15 @@ interface ArrayFieldProps {
   value: any[];
   onChange: (value: any[]) => void;
   error?: string;
+  disabled?: boolean;
 }
 
 export const ArrayField: React.FC<ArrayFieldProps> = ({
   config,
   value = [],
   onChange,
-  error
+  error,
+  disabled
 }) => {
   const { setValue, getValues } = useFormContext();
 
@@ -35,7 +37,11 @@ export const ArrayField: React.FC<ArrayFieldProps> = ({
 
   // Create text field config from template
   const createTextFieldConfig = (index: number): TextFieldConfig => {
-    const template = config.template;
+    // Support for dynamic templates based on index
+    const template = typeof config.template === 'function'
+      ? config.template(index)
+      : config.template;
+      
     if (template.type !== 'text') {
       throw new Error('Array field template must be of type text');
     }
@@ -43,7 +49,7 @@ export const ArrayField: React.FC<ArrayFieldProps> = ({
     return {
       ...template,
       id: `${config.id}-${index}`,
-      label: `${config.label} ${index + 1}`,
+      label: template.label || `${config.label} ${index + 1}`,
       type: 'text'
     };
   };
@@ -62,6 +68,7 @@ export const ArrayField: React.FC<ArrayFieldProps> = ({
               value={item}
               onChange={(newValue) => handleItemChange(index, newValue)}
               error={undefined}
+              disabled={disabled}
             />
           </div>
         ))}
