@@ -79,7 +79,7 @@ const advancedFieldCondition: FieldCondition = {
 };
 
 const ArrayFieldControls = () => {
-  const { arrayFields, setValue, getValues } = useFormContext();
+  const { setValue, getValues } = useFormContext();
 
   const handleAddEmail = () => {
     const currentEmails = (getValues('emails') || []) as string[];
@@ -348,7 +348,7 @@ const FormStateDisplay = () => {
                 <strong>Phone:</strong>
               </p>
               <p>Raw: {raw.phone}</p>
-              <p>Masked: {masked.phone}</p>
+              <p>Masked: {Array.isArray(masked.phone) ? masked.phone.join(', ') : masked.phone}</p>
               <p className="mt-2 text-sm text-gray-600">
                 Changed: {dirtyFields.phone ? 'Yes' : 'No'}
               </p>
@@ -446,7 +446,7 @@ const FormStateDisplay = () => {
             <div className="flex items-center mb-3">
               <div
                 className={`w-3 h-3 rounded-full mr-2 ${isLoading ? 'bg-purple-500' : 'bg-gray-300'}`}
-              ></div>
+              />
               <p className={isLoading ? 'text-purple-800 font-medium' : 'text-gray-500'}>
                 Form Loading State: {isLoading ? 'Active' : 'Inactive'}
               </p>
@@ -461,7 +461,7 @@ const FormStateDisplay = () => {
                       isFieldLoading && (
                         <div key={fieldId} className="flex items-center">
                           <span className="px-3 py-1 bg-purple-200 text-purple-800 rounded-full text-sm flex items-center">
-                            <span className="w-2 h-2 bg-purple-500 rounded-full mr-2 animate-pulse"></span>
+                            <span className="w-2 h-2 bg-purple-500 rounded-full mr-2 animate-pulse" />
                             {fieldId}
                           </span>
                         </div>
@@ -628,6 +628,9 @@ const FormWithQuery: React.FC<FormWithQueryProps> = ({
         isSubmitting: false,
       }));
 
+      // Reset the form after successful submission
+      formMethods.resetForm();
+
       setIsSubmitting(false);
     },
     onError: (error: Error) => {
@@ -648,11 +651,11 @@ const FormWithQuery: React.FC<FormWithQueryProps> = ({
     }));
 
     // Apply any external loading states to specific fields
-    Object.entries(loadingFields).forEach(([fieldId, isLoading]) => {
+    for (const [fieldId, isLoading] of Object.entries(loadingFields)) {
       if (isLoading) {
         formMethods.setFieldLoading(fieldId as keyof FormValues, true);
       }
-    });
+    }
 
     // Simulate API delay
     setTimeout(() => {
@@ -685,24 +688,24 @@ const FormWithQuery: React.FC<FormWithQueryProps> = ({
         : [];
 
       // Apply loading to fields from internal state
-      fieldsToLoad.forEach((fieldId) => {
+      for (const fieldId of fieldsToLoad) {
         formMethods.setFieldLoading(fieldId as keyof FormValues, true);
-      });
+      }
 
       // Apply any external loading states to specific fields
-      Object.entries(loadingFields).forEach(([fieldId, isFieldLoading]) => {
+      for (const [fieldId, isFieldLoading] of Object.entries(loadingFields)) {
         formMethods.setFieldLoading(fieldId as keyof FormValues, isFieldLoading);
-      });
+      }
     } else {
       // Reset all field loading states
-      ['phone', 'country', 'state'].forEach((fieldId) => {
+      for (const fieldId of ['phone', 'country', 'state']) {
         formMethods.setFieldLoading(fieldId as keyof FormValues, false);
-      });
+      }
 
       // Also reset any fields that might have been set from external loading
-      Object.keys(loadingFields).forEach((fieldId) => {
+      for (const fieldId of Object.keys(loadingFields)) {
         formMethods.setFieldLoading(fieldId as keyof FormValues, false);
-      });
+      }
     }
   }, [isSubmitting, externalLoading, loadingFields, formMethods]);
 
@@ -751,7 +754,7 @@ const FormWithQuery: React.FC<FormWithQueryProps> = ({
 };
 
 // Example component that demonstrates a more realistic form submission with staged loading
-const StagedSubmissionDemo = () => {
+const _StagedSubmissionDemo = () => {
   const [stagedLoading, setStagedLoading] = useState(false);
   const [currentStage, setCurrentStage] = useState(0);
   const [loadingFields, setLoadingFields] = useState<Record<string, boolean>>({});
@@ -786,9 +789,9 @@ const StagedSubmissionDemo = () => {
       const stageFields = stages[stageIndex].fields;
       const newLoadingFields: Record<string, boolean> = {};
 
-      stageFields.forEach((field) => {
+      for (const field of stageFields) {
         newLoadingFields[field] = true;
-      });
+      }
 
       setLoadingFields(newLoadingFields);
 
@@ -819,12 +822,13 @@ const StagedSubmissionDemo = () => {
             <div
               className="bg-green-600 h-2.5 rounded-full transition-all duration-300"
               style={{ width: `${((currentStage + 1) / stages.length) * 100}%` }}
-            ></div>
+            />
           </div>
         </div>
       )}
 
       <button
+        type="button"
         onClick={handleStagedSubmission}
         disabled={stagedLoading}
         className={`px-4 py-2 rounded text-white ${
@@ -847,7 +851,7 @@ const StagedSubmissionDemo = () => {
 
 // Component to demonstrate the new features
 const FeatureDemonstration = () => {
-  const { resetField, watch, setValue, shouldDisplayField, transformField, getFieldDependencies } =
+  const { resetField, watch, shouldDisplayField, transformField, getFieldDependencies } =
     useFormContext();
 
   const showAdvanced = watch('showAdvanced');
@@ -895,10 +899,10 @@ const FeatureDemonstration = () => {
           <h3 className="text-lg font-medium mb-2">Field Transformation:</h3>
           <div className="p-3 bg-gray-50 rounded">
             <p>
-              <strong>Formatted Number Display Value:</strong> {formattedNumber}
+              <strong>Formatted Number Display Value:</strong> {String(formattedNumber)}
             </p>
             <p>
-              <strong>Raw Number Value (stored):</strong> {rawNumber}
+              <strong>Raw Number Value (stored):</strong> {String(rawNumber)}
             </p>
           </div>
         </div>
@@ -915,7 +919,7 @@ const FeatureDemonstration = () => {
             </p>
             {isAdvancedFieldVisible && (
               <p>
-                <strong>Advanced Field Value:</strong> {advancedField || '(empty)'}
+                <strong>Advanced Field Value:</strong> {String(advancedField) || '(empty)'}
               </p>
             )}
           </div>
@@ -946,7 +950,7 @@ const FeatureDemonstration = () => {
             <ul className="list-disc pl-5">
               {Array.isArray(dynamicArrayField) &&
                 dynamicArrayField.map((item, index) => (
-                  <li key={index}>
+                  <li key={item}>
                     Item {index + 1}: {item}
                     {index === 0 && (
                       <span className="ml-2 text-xs text-gray-500">
@@ -1006,12 +1010,14 @@ export default function App() {
           </p>
           <div className="flex flex-wrap gap-3">
             <button
+              type="button"
               onClick={handleExternalLoadingDemo}
               className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
             >
               Set SSN & Password Fields Loading (3s)
             </button>
             <button
+              type="button"
               onClick={handleAllFieldsLoadingDemo}
               className="px-4 py-2 bg-indigo-500 text-white rounded hover:bg-indigo-600"
             >

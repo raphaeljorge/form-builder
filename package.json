@@ -6,9 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "lint": "npx @biomejs/biome check .",
-    "lint:fix": "npx @biomejs/biome check --apply .",
-    "format": "npx @biomejs/biome format --write .",
+    "lint": "npx @biomejs/biome check --max-diagnostics=100 .",
+    "lint:fix": "npx @biomejs/biome check --write --unsafe --max-diagnostics=100 .",
+    "format": "npx @biomejs/biome format --write --max-diagnostics=100 .",
     "preview": "vite preview",
     "test": "jest",
     "test:watch": "jest --watch",

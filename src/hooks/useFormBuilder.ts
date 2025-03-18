@@ -34,7 +34,7 @@ import {
  * @example
  * applyMask('1234567890', '(###) ###-####') // Returns '(123) 456-7890'
  */
-const applyMask = (value: string | any[] | undefined, mask?: string): string => {
+const applyMask = (value: string | unknown[] | undefined, mask?: string): string => {
   if (!value || !mask || Array.isArray(value)) return '';
 
   const rawValue = value.replace(/\D/g, '');
@@ -62,7 +62,7 @@ export interface FormStateData {
   /** Raw form values */
   raw: FormValues;
   /** Masked form values (for display) */
-  masked: Record<string, string | any[]>;
+  masked: Record<string, string | unknown[]>;
 }
 
 /**
@@ -84,15 +84,15 @@ const DEFAULT_VALUES: BaseFormValues = {
  * @returns An object with initialized array fields
  */
 const initializeArrayFields = (config: FormConfig) => {
-  const arrayFields: Record<string, any[]> = {};
+  const arrayFields: Record<string, unknown[]> = {};
 
-  config.rows.forEach((row) => {
-    row.columns.forEach((field) => {
+  for (const row of config.rows) {
+    for (const field of row.columns) {
       if (field.type === 'array' || field.type === 'chip') {
         arrayFields[field.id] = field.type === 'array' ? [''] : [];
       }
-    });
-  });
+    }
+  }
 
   return arrayFields;
 };
@@ -113,9 +113,9 @@ const deepClone = <T>(obj: T): T => {
   }
 
   const clone = {} as T;
-  Object.keys(obj as object).forEach((key) => {
-    (clone as any)[key] = deepClone((obj as any)[key]);
-  });
+  for (const key of Object.keys(obj as object)) {
+    (clone as Record<string, unknown>)[key] = deepClone((obj as Record<string, unknown>)[key]);
+  }
 
   return clone;
 };
@@ -132,7 +132,7 @@ const deepClone = <T>(obj: T): T => {
  */
 const validateSingleField = (
   fieldId: string,
-  value: any,
+  value: unknown,
   config: FormConfig,
   formValues: FormValues,
   updatedValues?: Partial<FormValues>
@@ -140,13 +140,13 @@ const validateSingleField = (
   let fieldConfig: any = null;
 
   // Find the field config
-  config.rows.forEach((row) => {
-    row.columns.forEach((field) => {
+  for (const row of config.rows) {
+    for (const field of row.columns) {
       if (field.id === fieldId) {
         fieldConfig = field;
       }
-    });
-  });
+    }
+  }
 
   if (!fieldConfig) {
     return { isValid: true };
@@ -182,16 +182,15 @@ const validateSingleField = (
 
       // If we get here, the select field is valid
       return { isValid: true };
-    } else {
-      // For other field types
-      const isEmptyValue = value === undefined || value === null || value === '';
+    }
+    // For other field types
+    const isEmptyValue = value === undefined || value === null || value === '';
 
-      if (isEmptyValue) {
-        return {
-          isValid: false,
-          error: fieldConfig.validation?.message || 'This field is required',
-        };
-      }
+    if (isEmptyValue) {
+      return {
+        isValid: false,
+        error: fieldConfig.validation?.message || 'This field is required',
+      };
     }
   }
 
@@ -294,7 +293,7 @@ export interface UseFormBuilderOptions {
   /** Delay before showing validation errors */
   delayError?: number;
   /** Additional context for validation */
-  context?: any;
+  context?: unknown;
   /** Debounce time for form submission in milliseconds */
   submitDebounce?: number;
   /** Whether to enable field-level dirty checking */
@@ -326,19 +325,19 @@ export type UseFormBuilderReturn = {
   /** Set focus to a field */
   setFieldFocus: (name: keyof FormValues) => void;
   /** Validate a field */
-  validateField: (name: keyof FormValues, value?: any) => Promise<boolean>;
+  validateField: (name: keyof FormValues, value?: unknown) => Promise<boolean>;
   /** Array field operations */
   arrayFields: Record<string, ArrayFieldOperations>;
   /** Set a field value */
-  setValue: (name: keyof FormValues, value: any, options?: SetValueOptions) => void;
+  setValue: (name: keyof FormValues, value: unknown, options?: SetValueOptions) => void;
   /** Watch a field value */
-  watch: (name?: keyof FormValues) => any;
+  watch: (name?: keyof FormValues) => unknown;
   /** Handle form submission */
   handleSubmit: (onSubmit: (data: FormValues) => void) => (e: React.FormEvent) => void;
   /** Form control object */
-  control: any;
+  control: unknown;
   /** Get form values */
-  getValues: (name?: keyof FormValues) => any;
+  getValues: (name?: keyof FormValues) => unknown;
   /** Form component */
   Form: React.FC<{ children: ReactNode }>;
   /** Set loading state */
@@ -350,7 +349,11 @@ export type UseFormBuilderReturn = {
   /** Check if a field should be displayed based on conditions */
   shouldDisplayField: (fieldId: keyof FormValues) => boolean;
   /** Transform a field value */
-  transformField: (fieldId: keyof FormValues, value: any, direction: 'input' | 'output') => any;
+  transformField: (
+    fieldId: keyof FormValues,
+    value: unknown,
+    direction: 'input' | 'output'
+  ) => unknown;
   /** Compose with another form */
   composeWith: (otherForm: UseFormBuilderReturn) => UseFormBuilderReturn;
 };
@@ -386,9 +389,9 @@ export interface FieldResetOptions {
  */
 export interface FieldTransformation {
   /** Transform value before storing in form state */
-  input?: (value: any) => any;
+  input?: (value: unknown) => unknown;
   /** Transform value before returning from form state */
-  output?: (value: any) => any;
+  output?: (value: unknown) => unknown;
 }
 
 /**
@@ -402,7 +405,7 @@ export interface FieldCondition {
 }
 
 // Debounce function for form submission
-const debounce = <F extends (...args: any[]) => any>(
+const debounce = <F extends (...args: unknown[]) => unknown>(
   func: F,
   waitFor: number
 ): ((...args: Parameters<F>) => void) => {
@@ -443,21 +446,21 @@ export const useFormBuilder = (
 
     // Apply input transformations to default values if enabled
     if (options.enableFieldTransformation) {
-      config.rows.forEach((row) => {
-        row.columns.forEach((field) => {
+      for (const row of config.rows) {
+        for (const field of row.columns) {
           if (field.transform && values[field.id] !== undefined) {
             const transformation = field.transform as FieldTransformation;
             if (transformation.input) {
               values[field.id] = transformation.input(values[field.id]);
             }
           }
-        });
-      });
+        }
+      }
     }
 
     // Ensure select fields with default values are properly handled
-    config.rows.forEach((row) => {
-      row.columns.forEach((field) => {
+    for (const row of config.rows) {
+      for (const field of row.columns) {
         if (field.type === 'select') {
           // If there's a default value in options, use it
           if (options.defaultValues && options.defaultValues[field.id] !== undefined) {
@@ -468,12 +471,12 @@ export const useFormBuilder = (
             values[field.id] = field.options[0].value;
           }
         }
-      });
-    });
+      }
+    }
 
     // Pre-validate select fields with default values to clear any errors
-    config.rows.forEach((row) => {
-      row.columns.forEach((field) => {
+    for (const row of config.rows) {
+      for (const field of row.columns) {
         if (field.type === 'select') {
           // For select fields, if there's a value, mark it as pre-validated
           if (
@@ -490,8 +493,8 @@ export const useFormBuilder = (
             values[`__prevalidated_${field.id}`] = true;
           }
         }
-      });
-    });
+      }
+    }
 
     return values;
   }, [config, options.defaultValues, options.enableFieldTransformation]);
@@ -519,7 +522,7 @@ export const useFormBuilder = (
   });
 
   // Track field-level dirty state if enabled
-  const [dirtyFields, setDirtyFields] = useState<Record<string, boolean>>(
+  const [_dirtyFields, setDirtyFields] = useState<Record<string, boolean>>(
     options.enableFieldLevelDirtyChecking ? {} : formState.dirtyFields
   );
 
@@ -545,16 +548,16 @@ export const useFormBuilder = (
       const dependencies: Record<string, Array<keyof FormValues>> = {};
 
       // Extract dependencies from validation rules
-      config.rows.forEach((row) => {
-        row.columns.forEach((field) => {
+      for (const row of config.rows) {
+        for (const field of row.columns) {
           if (field.validation?.deps) {
             // For fields that are depended on, track which fields depend on them
-            field.validation.deps.forEach((dep) => {
+            for (const dep of field.validation.deps) {
               if (!dependencies[dep]) {
                 dependencies[dep] = [];
               }
               dependencies[dep].push(field.id as keyof FormValues);
-            });
+            }
           }
 
           // Also check for conditional display dependencies
@@ -565,14 +568,14 @@ export const useFormBuilder = (
             }));
 
             // For fields that are depended on for display conditions
-            field.condition.dependsOn.forEach((dep) => {
+            for (const dep of field.condition.dependsOn) {
               if (!dependencies[dep]) {
                 dependencies[dep] = [];
               }
               if (!dependencies[dep].includes(field.id as keyof FormValues)) {
                 dependencies[dep].push(field.id as keyof FormValues);
               }
-            });
+            }
           }
 
           // Check for field transformations
@@ -582,8 +585,8 @@ export const useFormBuilder = (
               [field.id]: field.transform as FieldTransformation,
             }));
           }
-        });
-      });
+        }
+      }
 
       setFieldDependencies(dependencies);
     }
@@ -625,7 +628,7 @@ export const useFormBuilder = (
    * @returns A promise that resolves to a boolean indicating if the field is valid
    */
   const validateField = useCallback(
-    async (name: keyof FormValues, value?: any) => {
+    async (name: keyof FormValues, value?: unknown) => {
       setFormState((prev) => ({
         ...prev,
         isValidating: true,
@@ -746,17 +749,17 @@ export const useFormBuilder = (
 
       return result.isValid;
     },
-    [config, formValues]
+    [config, formValues, options?.enableFieldTransformation]
   );
 
   // Initialize array fields with proper field array handling
   const arrayFields: Record<string, ArrayFieldOperations> = {};
-  config.rows.forEach((row) => {
-    row.columns.forEach((field) => {
+  for (const row of config.rows) {
+    for (const field of row.columns) {
       if (field.type === 'array' || field.type === 'chip') {
         arrayFields[field.id] = {
-          append: (value) => {
-            const currentValues = (formValues[field.id] as any[]) || [];
+          append: (value: unknown) => {
+            const currentValues = (formValues[field.id] as unknown[]) || [];
             const newValues = [...currentValues, value];
 
             // Update form values
@@ -778,7 +781,7 @@ export const useFormBuilder = (
             // Validate with the new value
             validateField(field.id as keyof FormValues, newValues);
           },
-          prepend: (value) => {
+          prepend: (value: unknown) => {
             const currentValues = (formValues[field.id] as any[]) || [];
             const newValues = [value, ...currentValues];
 
@@ -801,9 +804,9 @@ export const useFormBuilder = (
             // Validate with the new value
             validateField(field.id as keyof FormValues, newValues);
           },
-          remove: (index) => {
+          remove: (index: number) => {
             const currentValues = (formValues[field.id] as any[]) || [];
-            const newValues = currentValues.filter((_: any, i: number) => i !== index);
+            const newValues = currentValues.filter((_, i: number) => i !== index);
 
             // Update form values
             setFormValues((prev) => ({
@@ -824,7 +827,7 @@ export const useFormBuilder = (
             // Validate with the new value
             validateField(field.id as keyof FormValues, newValues);
           },
-          swap: (indexA, indexB) => {
+          swap: (indexA: number, indexB: number) => {
             const currentValues = (formValues[field.id] as any[]) || [];
             const newValues = [...currentValues];
             [newValues[indexA], newValues[indexB]] = [newValues[indexB], newValues[indexA]];
@@ -848,7 +851,7 @@ export const useFormBuilder = (
             // Validate with the new value
             validateField(field.id as keyof FormValues, newValues);
           },
-          move: (from, to) => {
+          move: (from: number, to: number) => {
             const currentValues = (formValues[field.id] as any[]) || [];
             const newValues = [...currentValues];
             const [movedItem] = newValues.splice(from, 1);
@@ -873,7 +876,7 @@ export const useFormBuilder = (
             // Validate with the new value
             validateField(field.id as keyof FormValues, newValues);
           },
-          insert: (index, value) => {
+          insert: (index: number, value: unknown) => {
             const currentValues = (formValues[field.id] as any[]) || [];
             const newValues = [...currentValues];
             newValues.splice(index, 0, value);
@@ -899,15 +902,15 @@ export const useFormBuilder = (
           },
         };
       }
-    });
-  });
+    }
+  }
 
   // Calculate masked values based on config
-  const maskedValues: Record<string, string | any[]> = useMemo(() => {
+  const maskedValues: Record<string, string | unknown[]> = useMemo(() => {
     const masked: Record<string, string | any[]> = {};
 
-    config.rows.forEach((row) => {
-      row.columns.forEach((field) => {
+    for (const row of config.rows) {
+      for (const field of row.columns) {
         const rawValue = formValues[field.id];
         if (field.type === 'text' && field.mask) {
           masked[field.id] = applyMask(rawValue, field.mask);
@@ -916,8 +919,8 @@ export const useFormBuilder = (
         } else {
           masked[field.id] = rawValue || '';
         }
-      });
-    });
+      }
+    }
 
     return masked;
   }, [formValues, config]);
@@ -928,57 +931,54 @@ export const useFormBuilder = (
    * @param name - The name of the field to reset
    * @param options - Options for resetting the field
    */
-  const resetField = useCallback(
-    (name: keyof FormValues, options?: FieldResetOptions) => {
-      // Get the default value for this field
-      const defaultValue = defaultValuesRef.current[name];
+  const resetField = useCallback((name: keyof FormValues, options?: FieldResetOptions) => {
+    // Get the default value for this field
+    const defaultValue = defaultValuesRef.current[name];
 
-      // Update form values for this field
-      setFormValues((prev) => ({
+    // Update form values for this field
+    setFormValues((prev) => ({
+      ...prev,
+      [name]: options?.keepValue ? prev[name] : defaultValue,
+    }));
+
+    // Update form state for this field
+    setFormState((prev) => {
+      const newErrors = { ...prev.errors };
+      const newDirtyFields = { ...prev.dirtyFields };
+      const newTouchedFields = { ...prev.touchedFields };
+
+      if (!options?.keepError) {
+        delete newErrors[String(name)];
+      }
+
+      if (!options?.keepDirty) {
+        delete newDirtyFields[String(name)];
+      }
+
+      if (!options?.keepTouched) {
+        delete newTouchedFields[String(name)];
+      }
+
+      return {
         ...prev,
-        [name]: options?.keepValue ? prev[name] : defaultValue,
-      }));
+        errors: newErrors,
+        dirtyFields: newDirtyFields,
+        touchedFields: newTouchedFields,
+        isValid: Object.keys(newErrors).length === 0,
+      };
+    });
 
-      // Update form state for this field
-      setFormState((prev) => {
-        const newErrors = { ...prev.errors };
-        const newDirtyFields = { ...prev.dirtyFields };
-        const newTouchedFields = { ...prev.touchedFields };
-
-        if (!options?.keepError) {
-          delete newErrors[String(name)];
-        }
-
+    // If field-level dirty checking is enabled, update that too
+    if (options?.enableFieldLevelDirtyChecking) {
+      setDirtyFields((prev) => {
+        const newDirtyFields = { ...prev };
         if (!options?.keepDirty) {
           delete newDirtyFields[String(name)];
         }
-
-        if (!options?.keepTouched) {
-          delete newTouchedFields[String(name)];
-        }
-
-        return {
-          ...prev,
-          errors: newErrors,
-          dirtyFields: newDirtyFields,
-          touchedFields: newTouchedFields,
-          isValid: Object.keys(newErrors).length === 0,
-        };
+        return newDirtyFields;
       });
-
-      // If field-level dirty checking is enabled, update that too
-      if (options?.enableFieldLevelDirtyChecking) {
-        setDirtyFields((prev) => {
-          const newDirtyFields = { ...prev };
-          if (!options?.keepDirty) {
-            delete newDirtyFields[String(name)];
-          }
-          return newDirtyFields;
-        });
-      }
-    },
-    [defaultValuesRef]
-  );
+    }
+  }, []);
 
   /**
    * Reset the form to its initial state
@@ -1017,7 +1017,7 @@ export const useFormBuilder = (
       // Reset the form in TanStack Form
       form.reset();
     },
-    [formValues, form, defaultValuesRef]
+    [formValues, form]
   );
 
   /**
@@ -1058,7 +1058,7 @@ export const useFormBuilder = (
    * @returns The transformed value
    */
   const transformField = useCallback(
-    (fieldId: keyof FormValues, value: any, direction: 'input' | 'output') => {
+    (fieldId: keyof FormValues, value: unknown, direction: 'input' | 'output') => {
       const transformation = fieldTransformations[fieldId as string];
       if (!transformation) return value;
 
@@ -1082,14 +1082,15 @@ export const useFormBuilder = (
    * @param value - The value to set
    * @param options - Options for setting the value
    */
+  /* biome-ignore lint/correctness/useExhaustiveDependencies: complex dependencies */
   const setValue = useCallback(
-    (name: keyof FormValues, value: any, options?: SetValueOptions) => {
+    (name: keyof FormValues, value: unknown, options?: SetValueOptions) => {
       // Apply input transformation if enabled
       const transformedValue =
         options?.enableFieldTransformation === true ? transformField(name, value, 'input') : value;
 
       // Create an update object for validation
-      const updateObj = { [name]: transformedValue };
+      const _updateObj = { [name]: transformedValue };
 
       // Special handling for password confirmation
       if (name === 'password' && formValues.confirmPassword) {
@@ -1175,9 +1176,9 @@ export const useFormBuilder = (
         // If automatic dependency revalidation is enabled, validate dependent fields
         if (options?.enableAutomaticDependencyRevalidation === true) {
           const dependentFields = getFieldDependencies(name);
-          dependentFields.forEach((depField) => {
+          for (const depField of dependentFields) {
             validateField(depField, formValues[depField]);
-          });
+          }
         }
       }
 
@@ -1189,7 +1190,7 @@ export const useFormBuilder = (
         }));
       }
     },
-    [formValues, validateField]
+    [formValues, validateField, getFieldDependencies, transformField]
   );
 
   /**
@@ -1198,6 +1199,7 @@ export const useFormBuilder = (
    * @param otherForm - Another form instance to compose with
    * @returns A combined form instance
    */
+  /* biome-ignore lint/correctness/useExhaustiveDependencies: complex dependencies */
   const composeWith = useCallback(
     (otherForm: UseFormBuilderReturn) => {
       // This is a simplified implementation of form composition
@@ -1280,19 +1282,19 @@ export const useFormBuilder = (
       // If watching all values and transformations are enabled, transform all values
       if (options?.enableFieldTransformation === true) {
         const transformedValues = { ...formValues };
-        Object.keys(fieldTransformations).forEach((fieldId) => {
+        for (const fieldId of Object.keys(fieldTransformations)) {
           transformedValues[fieldId] = transformField(
             fieldId as keyof FormValues,
             formValues[fieldId],
             'output'
           );
-        });
+        }
         return transformedValues;
       }
 
       return formValues;
     },
-    [formValues]
+    [formValues, options?.enableFieldTransformation, transformField, fieldTransformations]
   );
 
   /**
@@ -1305,8 +1307,9 @@ export const useFormBuilder = (
     (onSubmit: (data: FormValues) => void) => {
       // Create a debounced version of the submission handler if debounce is enabled
       const debouncedSubmit = options.submitDebounce
-        ? debounce(onSubmit, options.submitDebounce)
+        ? debounce(onSubmit as any, options.submitDebounce)
         : onSubmit;
+
       return async (e: React.FormEvent) => {
         e.preventDefault();
 
@@ -1346,7 +1349,7 @@ export const useFormBuilder = (
                   isSubmitted: true,
                   isSubmitSuccessful: true,
                 }));
-              } catch (error) {
+              } catch (_error) {
                 // Handle errors
                 setTimeout(() => {
                   setFormState((prev) => ({
@@ -1359,7 +1362,7 @@ export const useFormBuilder = (
             }, 100);
 
             return;
-          } catch (error) {
+          } catch (_error) {
             // Set error state after a short delay
             setTimeout(() => {
               setFormState((prev) => ({
@@ -1376,11 +1379,11 @@ export const useFormBuilder = (
         const errors: Record<string, FieldError> = {};
         let isValid = true;
 
-        config.rows.forEach((row) => {
-          row.columns.forEach((field) => {
+        for (const row of config.rows) {
+          for (const field of row.columns) {
             // Skip validation for fields that shouldn't be displayed
             if (field.condition && !shouldDisplayField(field.id as keyof FormValues)) {
-              return;
+              continue;
             }
 
             // Get the value, applying any transformations if needed
@@ -1408,8 +1411,9 @@ export const useFormBuilder = (
                 isValid = false;
               }
             }
-          });
-        });
+          }
+        }
+
         setFormState((prev) => ({
           ...prev,
           errors,
@@ -1427,12 +1431,12 @@ export const useFormBuilder = (
             // Add form-level errors to the form state
             const newErrors = { ...errors };
 
-            Object.entries(formLevelErrors).forEach(([fieldId, errorMessage]) => {
+            for (const [fieldId, errorMessage] of Object.entries(formLevelErrors)) {
               newErrors[fieldId] = {
                 type: 'validation',
                 message: errorMessage,
               };
-            });
+            }
 
             setFormState((prev) => ({
               ...prev,
@@ -1471,7 +1475,7 @@ export const useFormBuilder = (
                   isSubmitted: true,
                   isSubmitSuccessful: true,
                 }));
-              } catch (error) {
+              } catch (_error) {
                 // Handle errors
                 setTimeout(() => {
                   setFormState((prev) => ({
@@ -1482,7 +1486,7 @@ export const useFormBuilder = (
                 }, 300);
               }
             }, 100);
-          } catch (error) {
+          } catch (_error) {
             // Set error state after a short delay
             setTimeout(() => {
               setFormState((prev) => ({
@@ -1495,7 +1499,16 @@ export const useFormBuilder = (
         }
       };
     },
-    [config, formValues, form]
+    [
+      config,
+      formValues,
+      shouldDisplayField,
+      transformField,
+      options.mode,
+      options.formValidation,
+      options.submitDebounce,
+      options?.enableFieldTransformation,
+    ]
   );
 
   /**
@@ -1528,19 +1541,19 @@ export const useFormBuilder = (
       // If getting all values and transformations are enabled, transform all values
       if (options?.enableFieldTransformation === true) {
         const transformedValues = { ...formValues };
-        Object.keys(fieldTransformations).forEach((fieldId) => {
+        for (const fieldId of Object.keys(fieldTransformations)) {
           transformedValues[fieldId] = transformField(
             fieldId as keyof FormValues,
             formValues[fieldId],
             'output'
           );
-        });
+        }
         return transformedValues;
       }
 
       return formValues;
     },
-    [formValues]
+    [formValues, options?.enableFieldTransformation, transformField, fieldTransformations]
   );
 
   /**
