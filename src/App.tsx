@@ -592,26 +592,7 @@ const FormWithQuery: React.FC<FormWithQueryProps> = ({
   };
 
   const formMethods = useFormBuilder(enhancedConfig, {
-    enableFieldTransformation: true,
-    enableAutomaticDependencyRevalidation: true,
-    enableFieldLevelDirtyChecking: true,
-    enablePerformanceOptimizations: true,
     submitDebounce: 500,
-    formValidation: (values) => {
-      // Example of form-level validation
-      const errors: Record<string, string> = {};
-
-      // Cross-field validation
-      if (values.formattedNumber && values.advancedField) {
-        const numValue = Number(values.formattedNumber.toString().replace(/,/g, ''));
-        if (numValue > 10000 && values.advancedField.length < 5) {
-          errors.advancedField =
-            'Advanced field must be at least 5 characters when number is > 10,000';
-        }
-      }
-
-      return Object.keys(errors).length > 0 ? errors : null;
-    },
     defaultValues,
   });
 

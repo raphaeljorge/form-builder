@@ -296,16 +296,6 @@ export interface UseFormBuilderOptions {
   context?: unknown;
   /** Debounce time for form submission in milliseconds */
   submitDebounce?: number;
-  /** Whether to enable field-level dirty checking */
-  enableFieldLevelDirtyChecking?: boolean;
-  /** Whether to enable field transformation */
-  enableFieldTransformation?: boolean;
-  /** Whether to enable automatic revalidation of dependent fields */
-  enableAutomaticDependencyRevalidation?: boolean;
-  /** Whether to enable performance optimizations */
-  enablePerformanceOptimizations?: boolean;
-  /** Form-level validation function */
-  formValidation?: (values: FormValues) => Record<string, string> | null;
 }
 
 /**
@@ -380,8 +370,6 @@ export interface FieldResetOptions {
   keepValue?: boolean;
   /** Whether to keep the field's touched state */
   keepTouched?: boolean;
-  /** Whether to enable field-level dirty checking */
-  enableFieldLevelDirtyChecking?: boolean;
 }
 
 /**
@@ -444,15 +432,13 @@ export const useFormBuilder = (
       ...options.defaultValues,
     } as FormValues;
 
-    // Apply input transformations to default values if enabled
-    if (options.enableFieldTransformation) {
-      for (const row of config.rows) {
-        for (const field of row.columns) {
-          if (field.transform && values[field.id] !== undefined) {
-            const transformation = field.transform as FieldTransformation;
-            if (transformation.input) {
-              values[field.id] = transformation.input(values[field.id]);
-            }
+    // Apply input transformations to default values - always enabled
+    for (const row of config.rows) {
+      for (const field of row.columns) {
+        if (field.transform && values[field.id] !== undefined) {
+          const transformation = field.transform as FieldTransformation;
+          if (transformation.input) {
+            values[field.id] = transformation.input(values[field.id]);
           }
         }
       }
@@ -497,7 +483,7 @@ export const useFormBuilder = (
     }
 
     return values;
-  }, [config, options.defaultValues, options.enableFieldTransformation]);
+  }, [config, options.defaultValues]);
 
   // Keep a reference to the original default values
   const defaultValuesRef = useRef(deepClone(initialValues));
@@ -521,10 +507,8 @@ export const useFormBuilder = (
     loadingFields: {},
   });
 
-  // Track field-level dirty state if enabled
-  const [_dirtyFields, setDirtyFields] = useState<Record<string, boolean>>(
-    options.enableFieldLevelDirtyChecking ? {} : formState.dirtyFields
-  );
+  // Track field-level dirty state - always enabled
+  const [_dirtyFields, setDirtyFields] = useState<Record<string, boolean>>({});
 
   // Create a TanStack form
   const form = useForm({
@@ -542,55 +526,53 @@ export const useFormBuilder = (
     },
   });
 
-  // Extract field dependencies from config
+  // Extract field dependencies from config - always enabled
   useEffect(() => {
-    if (options.enableAutomaticDependencyRevalidation) {
-      const dependencies: Record<string, Array<keyof FormValues>> = {};
+    const dependencies: Record<string, Array<keyof FormValues>> = {};
 
-      // Extract dependencies from validation rules
-      for (const row of config.rows) {
-        for (const field of row.columns) {
-          if (field.validation?.deps) {
-            // For fields that are depended on, track which fields depend on them
-            for (const dep of field.validation.deps) {
-              if (!dependencies[dep]) {
-                dependencies[dep] = [];
-              }
+    // Extract dependencies from validation rules
+    for (const row of config.rows) {
+      for (const field of row.columns) {
+        if (field.validation?.deps) {
+          // For fields that are depended on, track which fields depend on them
+          for (const dep of field.validation.deps) {
+            if (!dependencies[dep]) {
+              dependencies[dep] = [];
+            }
+            dependencies[dep].push(field.id as keyof FormValues);
+          }
+        }
+
+        // Also check for conditional display dependencies
+        if (field.condition?.dependsOn) {
+          setFieldConditions((prev) => ({
+            ...prev,
+            [field.id]: field.condition as FieldCondition,
+          }));
+
+          // For fields that are depended on for display conditions
+          for (const dep of field.condition.dependsOn) {
+            if (!dependencies[dep]) {
+              dependencies[dep] = [];
+            }
+            if (!dependencies[dep].includes(field.id as keyof FormValues)) {
               dependencies[dep].push(field.id as keyof FormValues);
             }
           }
+        }
 
-          // Also check for conditional display dependencies
-          if (field.condition?.dependsOn) {
-            setFieldConditions((prev) => ({
-              ...prev,
-              [field.id]: field.condition as FieldCondition,
-            }));
-
-            // For fields that are depended on for display conditions
-            for (const dep of field.condition.dependsOn) {
-              if (!dependencies[dep]) {
-                dependencies[dep] = [];
-              }
-              if (!dependencies[dep].includes(field.id as keyof FormValues)) {
-                dependencies[dep].push(field.id as keyof FormValues);
-              }
-            }
-          }
-
-          // Check for field transformations
-          if (field.transform && options.enableFieldTransformation) {
-            setFieldTransformations((prev) => ({
-              ...prev,
-              [field.id]: field.transform as FieldTransformation,
-            }));
-          }
+        // Check for field transformations - always enabled
+        if (field.transform) {
+          setFieldTransformations((prev) => ({
+            ...prev,
+            [field.id]: field.transform as FieldTransformation,
+          }));
         }
       }
-
-      setFieldDependencies(dependencies);
     }
-  }, [config, options.enableAutomaticDependencyRevalidation, options.enableFieldTransformation]);
+
+    setFieldDependencies(dependencies);
+  }, [config]);
 
   /**
    * Set loading state for the entire form
@@ -715,11 +697,9 @@ export const useFormBuilder = (
 
         return true;
       }
-      // Apply transformations if needed
-      const transformedValue =
-        options?.enableFieldTransformation === true
-          ? transformField(name, valueToValidate, 'input')
-          : valueToValidate;
+      
+      // Apply transformations - always enabled
+      const transformedValue = transformField(name, valueToValidate, 'input');
 
       const result = validateSingleField(String(name), transformedValue, config, formValues);
 
@@ -749,7 +729,7 @@ export const useFormBuilder = (
 
       return result.isValid;
     },
-    [config, formValues, options?.enableFieldTransformation]
+    [config, formValues]
   );
 
   // Initialize array fields with proper field array handling
@@ -968,16 +948,14 @@ export const useFormBuilder = (
       };
     });
 
-    // If field-level dirty checking is enabled, update that too
-    if (options?.enableFieldLevelDirtyChecking) {
-      setDirtyFields((prev) => {
-        const newDirtyFields = { ...prev };
-        if (!options?.keepDirty) {
-          delete newDirtyFields[String(name)];
-        }
-        return newDirtyFields;
-      });
-    }
+    // Always update field-level dirty state
+    setDirtyFields((prev) => {
+      const newDirtyFields = { ...prev };
+      if (!options?.keepDirty) {
+        delete newDirtyFields[String(name)];
+      }
+      return newDirtyFields;
+    });
   }, []);
 
   /**
@@ -1085,9 +1063,8 @@ export const useFormBuilder = (
   /* biome-ignore lint/correctness/useExhaustiveDependencies: complex dependencies */
   const setValue = useCallback(
     (name: keyof FormValues, value: unknown, options?: SetValueOptions) => {
-      // Apply input transformation if enabled
-      const transformedValue =
-        options?.enableFieldTransformation === true ? transformField(name, value, 'input') : value;
+      // Apply input transformation - always enabled
+      const transformedValue = transformField(name, value, 'input');
 
       // Create an update object for validation
       const _updateObj = { [name]: transformedValue };
@@ -1173,17 +1150,15 @@ export const useFormBuilder = (
         // Validate with the new value directly
         validateField(name, transformedValue);
 
-        // If automatic dependency revalidation is enabled, validate dependent fields
-        if (options?.enableAutomaticDependencyRevalidation === true) {
-          const dependentFields = getFieldDependencies(name);
-          for (const depField of dependentFields) {
-            validateField(depField, formValues[depField]);
-          }
+        // Always validate dependent fields
+        const dependentFields = getFieldDependencies(name);
+        for (const depField of dependentFields) {
+          validateField(depField, formValues[depField]);
         }
       }
 
-      // Update field-level dirty state if enabled
-      if (options?.enableFieldLevelDirtyChecking === true && options?.shouldDirty !== false) {
+      // Always update field-level dirty state
+      if (options?.shouldDirty !== false) {
         setDirtyFields((prev) => ({
           ...prev,
           [name]: true,
@@ -1273,28 +1248,22 @@ export const useFormBuilder = (
   const watch = useCallback(
     (name?: keyof FormValues) => {
       if (name) {
-        // Apply output transformation if enabled
-        return options?.enableFieldTransformation === true
-          ? transformField(name, formValues[name], 'output')
-          : formValues[name];
+        // Apply output transformation - always enabled
+        return transformField(name, formValues[name], 'output');
       }
 
-      // If watching all values and transformations are enabled, transform all values
-      if (options?.enableFieldTransformation === true) {
-        const transformedValues = { ...formValues };
-        for (const fieldId of Object.keys(fieldTransformations)) {
-          transformedValues[fieldId] = transformField(
-            fieldId as keyof FormValues,
-            formValues[fieldId],
-            'output'
-          );
-        }
-        return transformedValues;
+      // Always transform all values
+      const transformedValues = { ...formValues };
+      for (const fieldId of Object.keys(fieldTransformations)) {
+        transformedValues[fieldId] = transformField(
+          fieldId as keyof FormValues,
+          formValues[fieldId],
+          'output'
+        );
       }
-
-      return formValues;
+      return transformedValues;
     },
-    [formValues, options?.enableFieldTransformation, transformField, fieldTransformations]
+    [formValues, transformField, fieldTransformations]
   );
 
   /**
@@ -1328,13 +1297,11 @@ export const useFormBuilder = (
         if (!shouldValidateOnSubmit) {
           // Skip validation and just submit the form
           try {
-            const submissionValues =
-              options?.enableFieldTransformation === true
-                ? Object.keys(formValues).reduce((acc, key) => {
-                    acc[key] = transformField(key as keyof FormValues, formValues[key], 'output');
-                    return acc;
-                  }, {} as FormValues)
-                : formValues;
+            // Always apply transformations
+            const submissionValues = Object.keys(formValues).reduce((acc, key) => {
+              acc[key] = transformField(key as keyof FormValues, formValues[key], 'output');
+              return acc;
+            }, {} as FormValues);
 
             // Show loading state for a short time, then submit
             setTimeout(async () => {
@@ -1386,11 +1353,8 @@ export const useFormBuilder = (
               continue;
             }
 
-            // Get the value, applying any transformations if needed
-            const fieldValue =
-              options?.enableFieldTransformation === true
-                ? transformField(field.id as keyof FormValues, formValues[field.id], 'input')
-                : formValues[field.id];
+            // Get the value, applying transformations - always enabled
+            const fieldValue = transformField(field.id as keyof FormValues, formValues[field.id], 'input');
 
             // Special handling for select fields with default values
             const isSelectField = field.type === 'select';
@@ -1422,45 +1386,15 @@ export const useFormBuilder = (
           isSubmitting: isValid ? prev.isSubmitting : false,
         }));
 
-        // Perform form-level validation if provided
-        let formLevelErrors: Record<string, string> | null = null;
-        if (options.formValidation) {
-          formLevelErrors = options.formValidation(formValues);
-
-          if (formLevelErrors) {
-            // Add form-level errors to the form state
-            const newErrors = { ...errors };
-
-            for (const [fieldId, errorMessage] of Object.entries(formLevelErrors)) {
-              newErrors[fieldId] = {
-                type: 'validation',
-                message: errorMessage,
-              };
-            }
-
-            setFormState((prev) => ({
-              ...prev,
-              errors: newErrors,
-              isValid: false,
-              // If there are form-level validation errors, stop the submitting state
-              isSubmitting: false,
-            }));
-
-            isValid = false;
-          }
-        }
 
         if (isValid) {
           try {
             // Call the user's onSubmit handler
-            // Apply output transformations to all values if enabled
-            const submissionValues =
-              options?.enableFieldTransformation === true
-                ? Object.keys(formValues).reduce((acc, key) => {
-                    acc[key] = transformField(key as keyof FormValues, formValues[key], 'output');
-                    return acc;
-                  }, {} as FormValues)
-                : formValues;
+            // Always apply transformations
+            const submissionValues = Object.keys(formValues).reduce((acc, key) => {
+              acc[key] = transformField(key as keyof FormValues, formValues[key], 'output');
+              return acc;
+            }, {} as FormValues);
 
             // Show loading state for a short time, then submit
             setTimeout(async () => {
@@ -1505,9 +1439,7 @@ export const useFormBuilder = (
       shouldDisplayField,
       transformField,
       options.mode,
-      options.formValidation,
       options.submitDebounce,
-      options?.enableFieldTransformation,
     ]
   );
 
@@ -1532,28 +1464,22 @@ export const useFormBuilder = (
   const getValues = useCallback(
     (name?: keyof FormValues) => {
       if (name) {
-        // Apply output transformation if enabled
-        return options?.enableFieldTransformation === true
-          ? transformField(name, formValues[name], 'output')
-          : formValues[name];
+        // Always apply transformations
+        return transformField(name, formValues[name], 'output');
       }
 
-      // If getting all values and transformations are enabled, transform all values
-      if (options?.enableFieldTransformation === true) {
-        const transformedValues = { ...formValues };
-        for (const fieldId of Object.keys(fieldTransformations)) {
-          transformedValues[fieldId] = transformField(
-            fieldId as keyof FormValues,
-            formValues[fieldId],
-            'output'
-          );
-        }
-        return transformedValues;
+      // Always transform all values
+      const transformedValues = { ...formValues };
+      for (const fieldId of Object.keys(fieldTransformations)) {
+        transformedValues[fieldId] = transformField(
+          fieldId as keyof FormValues,
+          formValues[fieldId],
+          'output'
+        );
       }
-
-      return formValues;
+      return transformedValues;
     },
-    [formValues, options?.enableFieldTransformation, transformField, fieldTransformations]
+    [formValues, transformField, fieldTransformations]
   );
 
   /**
@@ -1563,7 +1489,7 @@ export const useFormBuilder = (
     return createElement(Fragment, null, children);
   }, []);
 
-  // Apply performance optimizations if enabled
+  // Always apply performance optimizations
   const memoizedState = useMemo(
     () => ({
       raw: formValues,
@@ -1578,14 +1504,9 @@ export const useFormBuilder = (
   // Validation will only happen on user interaction or form submission
 
   return {
-    state:
-      options?.enablePerformanceOptimizations === true
-        ? memoizedState
-        : {
-            raw: formValues,
-            masked: maskedValues,
-          },
-    formState: options?.enablePerformanceOptimizations === true ? memoizedFormState : formState,
+    // Always use memoized state
+    state: memoizedState,
+    formState: memoizedFormState,
     setFormState, // Expose the setFormState function
     resetForm,
     resetField,

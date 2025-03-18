@@ -140,9 +140,6 @@ export interface SetValueOptions {
   shouldDirty?: boolean;
   shouldTouch?: boolean;
   shouldValidate?: boolean;
-  enableFieldTransformation?: boolean;
-  enableAutomaticDependencyRevalidation?: boolean;
-  enableFieldLevelDirtyChecking?: boolean;
   /** Validation mode for this specific setValue call */
   mode?: 'onSubmit' | 'onChange' | 'onBlur' | 'onTouched' | 'all' | 'none';
 }
@@ -165,7 +162,6 @@ export interface FieldResetOptions {
   keepDirty?: boolean;
   keepValue?: boolean;
   keepTouched?: boolean;
-  enableFieldLevelDirtyChecking?: boolean;
 }
 
 // Options for form reset
