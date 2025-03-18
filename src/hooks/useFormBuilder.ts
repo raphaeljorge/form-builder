@@ -1,35 +1,42 @@
-import { 
-  useForm
-} from '@tanstack/react-form';
-import { 
-  FormConfig, 
-  FormValues, 
-  BaseFormValues,
-  ArrayFieldOperations,
-  SetValueOptions,
-  EnhancedFormState,
-  baseSchema,
-  ValidationError,
-  FormResetOptions,
-  createValidationSchema,
-  FieldError
-} from '../types/form';
+import { useForm } from '@tanstack/react-form';
+import {
+  Fragment,
+  type ReactNode,
+  createElement,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import * as z from 'zod';
-import { useCallback, useMemo, useState, ReactNode, useEffect, createElement, Fragment, useRef } from 'react';
+import {
+  type ArrayFieldOperations,
+  type BaseFormValues,
+  type EnhancedFormState,
+  type FieldError,
+  type FormConfig,
+  type FormResetOptions,
+  type FormValues,
+  type SetValueOptions,
+  ValidationError,
+  baseSchema,
+  createValidationSchema,
+} from '../types/form';
 
 /**
  * Applies a mask to a string value
- * 
+ *
  * @param value - The value to mask
  * @param mask - The mask pattern (# for digits)
  * @returns The masked value
- * 
+ *
  * @example
  * applyMask('1234567890', '(###) ###-####') // Returns '(123) 456-7890'
  */
 const applyMask = (value: string | any[] | undefined, mask?: string): string => {
   if (!value || !mask || Array.isArray(value)) return '';
-  
+
   const rawValue = value.replace(/\D/g, '');
   let result = '';
   let maskIndex = 0;
@@ -67,20 +74,20 @@ const DEFAULT_VALUES: BaseFormValues = {
   country: '',
   state: '',
   password: '',
-  confirmPassword: ''
+  confirmPassword: '',
 };
 
 /**
  * Initialize array fields based on form configuration
- * 
+ *
  * @param config - The form configuration
  * @returns An object with initialized array fields
  */
 const initializeArrayFields = (config: FormConfig) => {
   const arrayFields: Record<string, any[]> = {};
-  
-  config.rows.forEach(row => {
-    row.columns.forEach(field => {
+
+  config.rows.forEach((row) => {
+    row.columns.forEach((field) => {
       if (field.type === 'array' || field.type === 'chip') {
         arrayFields[field.id] = field.type === 'array' ? [''] : [];
       }
@@ -92,7 +99,7 @@ const initializeArrayFields = (config: FormConfig) => {
 
 /**
  * Deep clone an object
- * 
+ *
  * @param obj - The object to clone
  * @returns A deep clone of the object
  */
@@ -102,11 +109,11 @@ const deepClone = <T>(obj: T): T => {
   }
 
   if (Array.isArray(obj)) {
-    return obj.map(item => deepClone(item)) as unknown as T;
+    return obj.map((item) => deepClone(item)) as unknown as T;
   }
 
   const clone = {} as T;
-  Object.keys(obj as object).forEach(key => {
+  Object.keys(obj as object).forEach((key) => {
     (clone as any)[key] = deepClone((obj as any)[key]);
   });
 
@@ -115,7 +122,7 @@ const deepClone = <T>(obj: T): T => {
 
 /**
  * Validates a single field
- * 
+ *
  * @param fieldId - The ID of the field to validate
  * @param value - The value to validate
  * @param config - The form configuration
@@ -131,26 +138,26 @@ const validateSingleField = (
   updatedValues?: Partial<FormValues>
 ): { isValid: boolean; error?: string } => {
   let fieldConfig: any = null;
-  
+
   // Find the field config
-  config.rows.forEach(row => {
-    row.columns.forEach(field => {
+  config.rows.forEach((row) => {
+    row.columns.forEach((field) => {
       if (field.id === fieldId) {
         fieldConfig = field;
       }
     });
   });
-  
+
   if (!fieldConfig) {
     return { isValid: true };
   }
-  
+
   // Create a merged values object with any updated values
   const mergedValues = {
     ...formValues,
-    ...updatedValues
+    ...updatedValues,
   };
-  
+
   // Required field validation
   if (fieldConfig.required) {
     // For select fields, we need special handling
@@ -158,104 +165,107 @@ const validateSingleField = (
       // Only consider it empty if it's explicitly undefined, null, or empty string
       // Any other value (including 0, false, etc.) is considered valid
       const isEmptyValue = value === undefined || value === null || value === '';
-      
+
       // For select fields, check if there's a default value in the form values
       // If there is, consider it valid regardless of the current value
-      const hasDefaultValue = formValues[fieldConfig.id] !== undefined &&
-                             formValues[fieldConfig.id] !== null &&
-                             formValues[fieldConfig.id] !== '';
-      
+      const hasDefaultValue =
+        formValues[fieldConfig.id] !== undefined &&
+        formValues[fieldConfig.id] !== null &&
+        formValues[fieldConfig.id] !== '';
+
       if (isEmptyValue && !hasDefaultValue) {
         return {
           isValid: false,
-          error: fieldConfig.validation?.message || 'Please select an option'
+          error: fieldConfig.validation?.message || 'Please select an option',
         };
       }
-      
+
       // If we get here, the select field is valid
       return { isValid: true };
     } else {
       // For other field types
       const isEmptyValue = value === undefined || value === null || value === '';
-      
+
       if (isEmptyValue) {
         return {
           isValid: false,
-          error: fieldConfig.validation?.message || 'This field is required'
+          error: fieldConfig.validation?.message || 'This field is required',
         };
       }
     }
   }
-  
+
   // Array field validation
   if (fieldConfig.type === 'array' || fieldConfig.type === 'chip') {
     const array = Array.isArray(value) ? value : [];
-    
+
     // Filter out empty values for validation
-    const nonEmptyArray = array.filter(item => item !== '' && item !== null && item !== undefined);
-    
+    const nonEmptyArray = array.filter(
+      (item) => item !== '' && item !== null && item !== undefined
+    );
+
     if (fieldConfig.minItems && nonEmptyArray.length < fieldConfig.minItems) {
-      return { 
-        isValid: false, 
-        error: `Minimum ${fieldConfig.minItems} items required` 
+      return {
+        isValid: false,
+        error: `Minimum ${fieldConfig.minItems} items required`,
       };
     }
     if (fieldConfig.maxItems && nonEmptyArray.length > fieldConfig.maxItems) {
-      return { 
-        isValid: false, 
-        error: `Maximum ${fieldConfig.maxItems} items allowed` 
+      return {
+        isValid: false,
+        error: `Maximum ${fieldConfig.maxItems} items allowed`,
       };
     }
     return { isValid: true };
   }
-  
+
   // Additional select field validation can go here if needed
-  
+
   // Masked field validation
   if (fieldConfig.type === 'text' && fieldConfig.mask) {
     const digitCount = fieldConfig.mask.split('').filter((char: string) => char === '#').length;
     const rawValue = String(value || '').replace(/\D/g, '');
     if (rawValue.length > 0 && rawValue.length !== digitCount) {
-      return { 
-        isValid: false, 
-        error: fieldConfig.validation?.message || `Must be ${digitCount} digits` 
+      return {
+        isValid: false,
+        error: fieldConfig.validation?.message || `Must be ${digitCount} digits`,
       };
     }
   }
-  
+
   // Pattern validation
   if (fieldConfig.validation?.pattern && !fieldConfig.mask) {
     const pattern = new RegExp(fieldConfig.validation.pattern);
     if (value && !pattern.test(String(value))) {
-      return { 
-        isValid: false, 
-        error: fieldConfig.validation.message || 'Invalid format' 
+      return {
+        isValid: false,
+        error: fieldConfig.validation.message || 'Invalid format',
       };
     }
   }
-  
+
   // Password confirmation validation
   if (fieldId === 'confirmPassword') {
     const password = mergedValues.password;
     if (password !== value) {
       return {
         isValid: false,
-        error: 'Passwords do not match'
+        error: 'Passwords do not match',
       };
     }
   }
-  
+
   // Custom validation
   if (fieldConfig.validation?.custom) {
     const result = fieldConfig.validation.custom(String(value || ''), mergedValues);
     if (result !== true) {
-      return { 
-        isValid: false, 
-        error: typeof result === 'string' ? result : 'Invalid value' 
+      return {
+        isValid: false,
+        error: typeof result === 'string' ? result : 'Invalid value',
       };
     }
   }
-  
+
   return { isValid: true };
 };
 
@@ -347,11 +357,11 @@ export type UseFormBuilderReturn = {
 
 /**
  * Custom form builder hook that uses @tanstack/react-form
- * 
+ *
  * @param config - The form configuration
  * @param options - Options for the form builder
  * @returns Form builder API
- * 
+ *
  * @example
  * const { state, formState, setValue, watch, handleSubmit } = useFormBuilder(config);
  */
@@ -397,7 +407,7 @@ const debounce = <F extends (...args: any[]) => any>(
   waitFor: number
 ): ((...args: Parameters<F>) => void) => {
   let timeout: ReturnType<typeof setTimeout> | null = null;
-  
+
   return (...args: Parameters<F>): void => {
     if (timeout !== null) {
       clearTimeout(timeout);
@@ -411,26 +421,30 @@ export const useFormBuilder = (
   options: UseFormBuilderOptions = {}
 ): UseFormBuilderReturn => {
   // Field transformations
-  const [fieldTransformations, setFieldTransformations] = useState<Record<string, FieldTransformation>>({});
-  
+  const [fieldTransformations, setFieldTransformations] = useState<
+    Record<string, FieldTransformation>
+  >({});
+
   // Field conditions
   const [fieldConditions, setFieldConditions] = useState<Record<string, FieldCondition>>({});
-  
+
   // Field dependencies
-  const [fieldDependencies, setFieldDependencies] = useState<Record<string, Array<keyof FormValues>>>({});
-  
+  const [fieldDependencies, setFieldDependencies] = useState<
+    Record<string, Array<keyof FormValues>>
+  >({});
+
   // Initialize default values with array fields
   const initialValues = useMemo(() => {
     const values = {
       ...DEFAULT_VALUES,
       ...initializeArrayFields(config),
-      ...options.defaultValues
+      ...options.defaultValues,
     } as FormValues;
-    
+
     // Apply input transformations to default values if enabled
     if (options.enableFieldTransformation) {
-      config.rows.forEach(row => {
-        row.columns.forEach(field => {
+      config.rows.forEach((row) => {
+        row.columns.forEach((field) => {
           if (field.transform && values[field.id] !== undefined) {
             const transformation = field.transform as FieldTransformation;
             if (transformation.input) {
@@ -440,10 +454,10 @@ export const useFormBuilder = (
         });
       });
     }
-    
+
     // Ensure select fields with default values are properly handled
-    config.rows.forEach(row => {
-      row.columns.forEach(field => {
+    config.rows.forEach((row) => {
+      row.columns.forEach((field) => {
         if (field.type === 'select') {
           // If there's a default value in options, use it
           if (options.defaultValues && options.defaultValues[field.id] !== undefined) {
@@ -456,13 +470,17 @@ export const useFormBuilder = (
         }
       });
     });
-    
+
     // Pre-validate select fields with default values to clear any errors
-    config.rows.forEach(row => {
-      row.columns.forEach(field => {
+    config.rows.forEach((row) => {
+      row.columns.forEach((field) => {
         if (field.type === 'select') {
           // For select fields, if there's a value, mark it as pre-validated
-          if (values[field.id] !== undefined && values[field.id] !== null && values[field.id] !== '') {
+          if (
+            values[field.id] !== undefined &&
+            values[field.id] !== null &&
+            values[field.id] !== ''
+          ) {
             // Mark this field as pre-validated to avoid validation errors
             values[`__prevalidated_${field.id}`] = true;
           }
@@ -474,7 +492,7 @@ export const useFormBuilder = (
         }
       });
     });
-    
+
     return values;
   }, [config, options.defaultValues, options.enableFieldTransformation]);
 
@@ -497,9 +515,9 @@ export const useFormBuilder = (
     isLoading: false,
     disabled: false,
     validatingFields: {},
-    loadingFields: {}
+    loadingFields: {},
   });
-  
+
   // Track field-level dirty state if enabled
   const [dirtyFields, setDirtyFields] = useState<Record<string, boolean>>(
     options.enableFieldLevelDirtyChecking ? {} : formState.dirtyFields
@@ -510,44 +528,44 @@ export const useFormBuilder = (
     defaultValues: initialValues,
     onSubmit: async ({ value }) => {
       // We'll use this to track submission in TanStack Form
-      setFormState(prev => ({
+      setFormState((prev) => ({
         ...prev,
         isSubmitting: true,
         isSubmitted: true,
-        submitCount: prev.submitCount + 1
+        submitCount: prev.submitCount + 1,
       }));
-      
+
       return value;
-    }
+    },
   });
-  
+
   // Extract field dependencies from config
   useEffect(() => {
     if (options.enableAutomaticDependencyRevalidation) {
       const dependencies: Record<string, Array<keyof FormValues>> = {};
-      
+
       // Extract dependencies from validation rules
-      config.rows.forEach(row => {
-        row.columns.forEach(field => {
+      config.rows.forEach((row) => {
+        row.columns.forEach((field) => {
           if (field.validation?.deps) {
             // For fields that are depended on, track which fields depend on them
-            field.validation.deps.forEach(dep => {
+            field.validation.deps.forEach((dep) => {
               if (!dependencies[dep]) {
                 dependencies[dep] = [];
               }
               dependencies[dep].push(field.id as keyof FormValues);
             });
           }
-          
+
           // Also check for conditional display dependencies
           if (field.condition?.dependsOn) {
-            setFieldConditions(prev => ({
+            setFieldConditions((prev) => ({
               ...prev,
-              [field.id]: field.condition as FieldCondition
+              [field.id]: field.condition as FieldCondition,
             }));
-            
+
             // For fields that are depended on for display conditions
-            field.condition.dependsOn.forEach(dep => {
+            field.condition.dependsOn.forEach((dep) => {
               if (!dependencies[dep]) {
                 dependencies[dep] = [];
               }
@@ -556,17 +574,17 @@ export const useFormBuilder = (
               }
             });
           }
-          
+
           // Check for field transformations
           if (field.transform && options.enableFieldTransformation) {
-            setFieldTransformations(prev => ({
+            setFieldTransformations((prev) => ({
               ...prev,
-              [field.id]: field.transform as FieldTransformation
+              [field.id]: field.transform as FieldTransformation,
             }));
           }
         });
       });
-      
+
       setFieldDependencies(dependencies);
     }
   }, [config, options.enableAutomaticDependencyRevalidation, options.enableFieldTransformation]);
@@ -577,9 +595,9 @@ export const useFormBuilder = (
    * @param isLoading - Whether the form is loading
    */
   const setLoading = useCallback((isLoading: boolean) => {
-    setFormState(prev => ({
+    setFormState((prev) => ({
       ...prev,
-      isLoading
+      isLoading,
     }));
   }, []);
 
@@ -590,287 +608,295 @@ export const useFormBuilder = (
    * @param isLoading - Whether the field is loading
    */
   const setFieldLoading = useCallback((fieldId: keyof FormValues, isLoading: boolean) => {
-    setFormState(prev => ({
+    setFormState((prev) => ({
       ...prev,
       loadingFields: {
         ...prev.loadingFields,
-        [fieldId]: isLoading
-      }
+        [fieldId]: isLoading,
+      },
     }));
   }, []);
 
   /**
    * Validate a single field
-   * 
+   *
    * @param name - The name of the field to validate
    * @param value - The value to validate (optional)
    * @returns A promise that resolves to a boolean indicating if the field is valid
    */
-  const validateField = useCallback(async (name: keyof FormValues, value?: any) => {
-    setFormState(prev => ({
-      ...prev,
-      isValidating: true,
-      validatingFields: {
-        ...prev.validatingFields,
-        [name]: true
-      }
-    }));
-    
-    // Get the field configuration
-    const fieldConfig = config.rows.flatMap(row => row.columns).find(field => field.id === name);
-    
-    // If value is provided, use it for validation, otherwise use the current form value
-    const valueToValidate = value !== undefined ? value : formValues[name];
-    
-    // Skip validation for fields that shouldn't be displayed
-    if (fieldConfig?.condition && !shouldDisplayField(name)) {
-      setFormState(prev => {
-        const newErrors = { ...prev.errors };
-        delete newErrors[String(name)];
-        
-        return {
-          ...prev,
-          isValidating: false,
-          validatingFields: {
-            ...prev.validatingFields,
-            [name]: false
-          },
-          errors: newErrors,
-          isValid: Object.keys(newErrors).length === 0
-        };
-      });
-      
-      return true;
-    }
-    
-    // Check if this is a pre-validated field
-    if (formValues[`__prevalidated_${name}`]) {
-      // Clear any existing errors for this field
-      setFormState(prev => {
-        const newErrors = { ...prev.errors };
-        delete newErrors[String(name)];
-        
-        return {
-          ...prev,
-          isValidating: false,
-          validatingFields: {
-            ...prev.validatingFields,
-            [name]: false
-          },
-          errors: newErrors,
-          isValid: Object.keys(newErrors).length === 0
-        };
-      });
-      
-      return true;
-    }
-    
-    // Skip validation for select fields that already have a value
-    if (fieldConfig?.type === 'select' &&
-        valueToValidate !== undefined &&
-        valueToValidate !== null &&
-        valueToValidate !== '') {
-      // Clear any existing errors for this field
-      setFormState(prev => {
-        const newErrors = { ...prev.errors };
-        delete newErrors[String(name)];
-        
-        return {
-          ...prev,
-          isValidating: false,
-          validatingFields: {
-            ...prev.validatingFields,
-            [name]: false
-          },
-          errors: newErrors,
-          isValid: Object.keys(newErrors).length === 0
-        };
-      });
-      
-      return true;
-    }
-    // Apply transformations if needed
-    const transformedValue = options?.enableFieldTransformation === true
-      ? transformField(name, valueToValidate, 'input')
-      : valueToValidate;
-      
-    const result = validateSingleField(String(name), transformedValue, config, formValues);
-    
-    setFormState(prev => {
-      const newErrors = { ...prev.errors };
-      
-      if (!result.isValid && result.error) {
-        newErrors[String(name)] = {
-          type: 'validation',
-          message: result.error
-        };
-      } else {
-        delete newErrors[String(name)];
-      }
-      
-      return {
+  const validateField = useCallback(
+    async (name: keyof FormValues, value?: any) => {
+      setFormState((prev) => ({
         ...prev,
-        isValidating: false,
+        isValidating: true,
         validatingFields: {
           ...prev.validatingFields,
-          [name]: false
+          [name]: true,
         },
-        errors: newErrors,
-        isValid: Object.keys(newErrors).length === 0
-      };
-    });
-    
-    return result.isValid;
-  }, [config, formValues]);
+      }));
+
+      // Get the field configuration
+      const fieldConfig = config.rows
+        .flatMap((row) => row.columns)
+        .find((field) => field.id === name);
+
+      // If value is provided, use it for validation, otherwise use the current form value
+      const valueToValidate = value !== undefined ? value : formValues[name];
+
+      // Skip validation for fields that shouldn't be displayed
+      if (fieldConfig?.condition && !shouldDisplayField(name)) {
+        setFormState((prev) => {
+          const newErrors = { ...prev.errors };
+          delete newErrors[String(name)];
+
+          return {
+            ...prev,
+            isValidating: false,
+            validatingFields: {
+              ...prev.validatingFields,
+              [name]: false,
+            },
+            errors: newErrors,
+            isValid: Object.keys(newErrors).length === 0,
+          };
+        });
+
+        return true;
+      }
+
+      // Check if this is a pre-validated field
+      if (formValues[`__prevalidated_${name}`]) {
+        // Clear any existing errors for this field
+        setFormState((prev) => {
+          const newErrors = { ...prev.errors };
+          delete newErrors[String(name)];
+
+          return {
+            ...prev,
+            isValidating: false,
+            validatingFields: {
+              ...prev.validatingFields,
+              [name]: false,
+            },
+            errors: newErrors,
+            isValid: Object.keys(newErrors).length === 0,
+          };
+        });
+
+        return true;
+      }
+
+      // Skip validation for select fields that already have a value
+      if (
+        fieldConfig?.type === 'select' &&
+        valueToValidate !== undefined &&
+        valueToValidate !== null &&
+        valueToValidate !== ''
+      ) {
+        // Clear any existing errors for this field
+        setFormState((prev) => {
+          const newErrors = { ...prev.errors };
+          delete newErrors[String(name)];
+
+          return {
+            ...prev,
+            isValidating: false,
+            validatingFields: {
+              ...prev.validatingFields,
+              [name]: false,
+            },
+            errors: newErrors,
+            isValid: Object.keys(newErrors).length === 0,
+          };
+        });
+
+        return true;
+      }
+      // Apply transformations if needed
+      const transformedValue =
+        options?.enableFieldTransformation === true
+          ? transformField(name, valueToValidate, 'input')
+          : valueToValidate;
+
+      const result = validateSingleField(String(name), transformedValue, config, formValues);
+
+      setFormState((prev) => {
+        const newErrors = { ...prev.errors };
+
+        if (!result.isValid && result.error) {
+          newErrors[String(name)] = {
+            type: 'validation',
+            message: result.error,
+          };
+        } else {
+          delete newErrors[String(name)];
+        }
+
+        return {
+          ...prev,
+          isValidating: false,
+          validatingFields: {
+            ...prev.validatingFields,
+            [name]: false,
+          },
+          errors: newErrors,
+          isValid: Object.keys(newErrors).length === 0,
+        };
+      });
+
+      return result.isValid;
+    },
+    [config, formValues]
+  );
 
   // Initialize array fields with proper field array handling
   const arrayFields: Record<string, ArrayFieldOperations> = {};
-  config.rows.forEach(row => {
-    row.columns.forEach(field => {
+  config.rows.forEach((row) => {
+    row.columns.forEach((field) => {
       if (field.type === 'array' || field.type === 'chip') {
         arrayFields[field.id] = {
           append: (value) => {
-            const currentValues = formValues[field.id] as any[] || [];
+            const currentValues = (formValues[field.id] as any[]) || [];
             const newValues = [...currentValues, value];
-            
+
             // Update form values
-            setFormValues(prev => ({
+            setFormValues((prev) => ({
               ...prev,
-              [field.id]: newValues
+              [field.id]: newValues,
             }));
-            
+
             // Mark field as dirty
-            setFormState(prev => ({
+            setFormState((prev) => ({
               ...prev,
               isDirty: true,
               dirtyFields: {
                 ...prev.dirtyFields,
-                [field.id]: true
-              }
+                [field.id]: true,
+              },
             }));
-            
+
             // Validate with the new value
             validateField(field.id as keyof FormValues, newValues);
           },
           prepend: (value) => {
-            const currentValues = formValues[field.id] as any[] || [];
+            const currentValues = (formValues[field.id] as any[]) || [];
             const newValues = [value, ...currentValues];
-            
+
             // Update form values
-            setFormValues(prev => ({
+            setFormValues((prev) => ({
               ...prev,
-              [field.id]: newValues
+              [field.id]: newValues,
             }));
-            
+
             // Mark field as dirty
-            setFormState(prev => ({
+            setFormState((prev) => ({
               ...prev,
               isDirty: true,
               dirtyFields: {
                 ...prev.dirtyFields,
-                [field.id]: true
-              }
+                [field.id]: true,
+              },
             }));
-            
+
             // Validate with the new value
             validateField(field.id as keyof FormValues, newValues);
           },
           remove: (index) => {
-            const currentValues = formValues[field.id] as any[] || [];
+            const currentValues = (formValues[field.id] as any[]) || [];
             const newValues = currentValues.filter((_: any, i: number) => i !== index);
-            
+
             // Update form values
-            setFormValues(prev => ({
+            setFormValues((prev) => ({
               ...prev,
-              [field.id]: newValues
+              [field.id]: newValues,
             }));
-            
+
             // Mark field as dirty
-            setFormState(prev => ({
+            setFormState((prev) => ({
               ...prev,
               isDirty: true,
               dirtyFields: {
                 ...prev.dirtyFields,
-                [field.id]: true
-              }
+                [field.id]: true,
+              },
             }));
-            
+
             // Validate with the new value
             validateField(field.id as keyof FormValues, newValues);
           },
           swap: (indexA, indexB) => {
-            const currentValues = formValues[field.id] as any[] || [];
+            const currentValues = (formValues[field.id] as any[]) || [];
             const newValues = [...currentValues];
             [newValues[indexA], newValues[indexB]] = [newValues[indexB], newValues[indexA]];
-            
+
             // Update form values
-            setFormValues(prev => ({
+            setFormValues((prev) => ({
               ...prev,
-              [field.id]: newValues
+              [field.id]: newValues,
             }));
-            
+
             // Mark field as dirty
-            setFormState(prev => ({
+            setFormState((prev) => ({
               ...prev,
               isDirty: true,
               dirtyFields: {
                 ...prev.dirtyFields,
-                [field.id]: true
-              }
+                [field.id]: true,
+              },
             }));
-            
+
             // Validate with the new value
             validateField(field.id as keyof FormValues, newValues);
           },
           move: (from, to) => {
-            const currentValues = formValues[field.id] as any[] || [];
+            const currentValues = (formValues[field.id] as any[]) || [];
             const newValues = [...currentValues];
             const [movedItem] = newValues.splice(from, 1);
             newValues.splice(to, 0, movedItem);
-            
+
             // Update form values
-            setFormValues(prev => ({
+            setFormValues((prev) => ({
               ...prev,
-              [field.id]: newValues
+              [field.id]: newValues,
             }));
-            
+
             // Mark field as dirty
-            setFormState(prev => ({
+            setFormState((prev) => ({
               ...prev,
               isDirty: true,
               dirtyFields: {
                 ...prev.dirtyFields,
-                [field.id]: true
-              }
+                [field.id]: true,
+              },
             }));
-            
+
             // Validate with the new value
             validateField(field.id as keyof FormValues, newValues);
           },
           insert: (index, value) => {
-            const currentValues = formValues[field.id] as any[] || [];
+            const currentValues = (formValues[field.id] as any[]) || [];
             const newValues = [...currentValues];
             newValues.splice(index, 0, value);
-            
+
             // Update form values
-            setFormValues(prev => ({
+            setFormValues((prev) => ({
               ...prev,
-              [field.id]: newValues
+              [field.id]: newValues,
             }));
-            
+
             // Mark field as dirty
-            setFormState(prev => ({
+            setFormState((prev) => ({
               ...prev,
               isDirty: true,
               dirtyFields: {
                 ...prev.dirtyFields,
-                [field.id]: true
-              }
+                [field.id]: true,
+              },
             }));
-            
+
             // Validate with the new value
             validateField(field.id as keyof FormValues, newValues);
-          }
+          },
         };
       }
     });
@@ -879,9 +905,9 @@ export const useFormBuilder = (
   // Calculate masked values based on config
   const maskedValues: Record<string, string | any[]> = useMemo(() => {
     const masked: Record<string, string | any[]> = {};
-    
-    config.rows.forEach(row => {
-      row.columns.forEach(field => {
+
+    config.rows.forEach((row) => {
+      row.columns.forEach((field) => {
         const rawValue = formValues[field.id];
         if (field.type === 'text' && field.mask) {
           masked[field.id] = applyMask(rawValue, field.mask);
@@ -892,7 +918,7 @@ export const useFormBuilder = (
         }
       });
     });
-    
+
     return masked;
   }, [formValues, config]);
 
@@ -902,94 +928,97 @@ export const useFormBuilder = (
    * @param name - The name of the field to reset
    * @param options - Options for resetting the field
    */
-  const resetField = useCallback((
-    name: keyof FormValues,
-    options?: FieldResetOptions
-  ) => {
-    // Get the default value for this field
-    const defaultValue = defaultValuesRef.current[name];
-    
-    // Update form values for this field
-    setFormValues(prev => ({
-      ...prev,
-      [name]: options?.keepValue ? prev[name] : defaultValue
-    }));
-    
-    // Update form state for this field
-    setFormState(prev => {
-      const newErrors = { ...prev.errors };
-      const newDirtyFields = { ...prev.dirtyFields };
-      const newTouchedFields = { ...prev.touchedFields };
-      
-      if (!options?.keepError) {
-        delete newErrors[String(name)];
-      }
-      
-      if (!options?.keepDirty) {
-        delete newDirtyFields[String(name)];
-      }
-      
-      if (!options?.keepTouched) {
-        delete newTouchedFields[String(name)];
-      }
-      
-      return {
+  const resetField = useCallback(
+    (name: keyof FormValues, options?: FieldResetOptions) => {
+      // Get the default value for this field
+      const defaultValue = defaultValuesRef.current[name];
+
+      // Update form values for this field
+      setFormValues((prev) => ({
         ...prev,
-        errors: newErrors,
-        dirtyFields: newDirtyFields,
-        touchedFields: newTouchedFields,
-        isValid: Object.keys(newErrors).length === 0
-      };
-    });
-    
-    // If field-level dirty checking is enabled, update that too
-    if (options?.enableFieldLevelDirtyChecking) {
-      setDirtyFields(prev => {
-        const newDirtyFields = { ...prev };
+        [name]: options?.keepValue ? prev[name] : defaultValue,
+      }));
+
+      // Update form state for this field
+      setFormState((prev) => {
+        const newErrors = { ...prev.errors };
+        const newDirtyFields = { ...prev.dirtyFields };
+        const newTouchedFields = { ...prev.touchedFields };
+
+        if (!options?.keepError) {
+          delete newErrors[String(name)];
+        }
+
         if (!options?.keepDirty) {
           delete newDirtyFields[String(name)];
         }
-        return newDirtyFields;
+
+        if (!options?.keepTouched) {
+          delete newTouchedFields[String(name)];
+        }
+
+        return {
+          ...prev,
+          errors: newErrors,
+          dirtyFields: newDirtyFields,
+          touchedFields: newTouchedFields,
+          isValid: Object.keys(newErrors).length === 0,
+        };
       });
-    }
-  }, [defaultValuesRef]);
-  
+
+      // If field-level dirty checking is enabled, update that too
+      if (options?.enableFieldLevelDirtyChecking) {
+        setDirtyFields((prev) => {
+          const newDirtyFields = { ...prev };
+          if (!options?.keepDirty) {
+            delete newDirtyFields[String(name)];
+          }
+          return newDirtyFields;
+        });
+      }
+    },
+    [defaultValuesRef]
+  );
+
   /**
    * Reset the form to its initial state
    *
    * @param options - Options for resetting the form
    */
-  const resetForm = useCallback((options?: FormResetOptions) => {
-    // Create a new values object based on the options
-    const newValues = options?.keepValues
-      ? { ...formValues }
-      : deepClone(defaultValuesRef.current);
-    
-    // Update form values
-    setFormValues(newValues);
-    
-    // Update form state
-    setFormState(prev => {
-      const newState = {
-        ...prev,
-        isDirty: options?.keepDirty ? prev.isDirty : false,
-        dirtyFields: options?.keepDirty ? prev.dirtyFields : {},
-        isSubmitted: options?.keepIsSubmitted ? prev.isSubmitted : false,
-        isSubmitSuccessful: options?.keepIsSubmitted ? prev.isSubmitSuccessful : false,
-        submitCount: options?.keepSubmitCount ? prev.submitCount : 0,
-        touchedFields: options?.keepTouched ? prev.touchedFields : {},
-        errors: options?.keepErrors ? prev.errors : {},
-        isValid: options?.keepIsValid ? prev.isValid : true,
-        isLoading: false,
-        loadingFields: {}
-      };
-      
-      return newState;
-    });
-    
-    // Reset the form in TanStack Form
-    form.reset();
-  }, [formValues, form, defaultValuesRef]);
+  const resetForm = useCallback(
+    (options?: FormResetOptions) => {
+      // Create a new values object based on the options
+      const newValues = options?.keepValues
+        ? { ...formValues }
+        : deepClone(defaultValuesRef.current);
+
+      // Update form values
+      setFormValues(newValues);
+
+      // Update form state
+      setFormState((prev) => {
+        const newState = {
+          ...prev,
+          isDirty: options?.keepDirty ? prev.isDirty : false,
+          dirtyFields: options?.keepDirty ? prev.dirtyFields : {},
+          isSubmitted: options?.keepIsSubmitted ? prev.isSubmitted : false,
+          isSubmitSuccessful: options?.keepIsSubmitted ? prev.isSubmitSuccessful : false,
+          submitCount: options?.keepSubmitCount ? prev.submitCount : 0,
+          touchedFields: options?.keepTouched ? prev.touchedFields : {},
+          errors: options?.keepErrors ? prev.errors : {},
+          isValid: options?.keepIsValid ? prev.isValid : true,
+          isLoading: false,
+          loadingFields: {},
+        };
+
+        return newState;
+      });
+
+      // Reset the form in TanStack Form
+      form.reset();
+    },
+    [formValues, form, defaultValuesRef]
+  );
 
   /**
    * Get dependencies for a field
@@ -997,23 +1026,29 @@ export const useFormBuilder = (
    * @param fieldId - The ID of the field
    * @returns An array of field IDs that depend on this field
    */
-  const getFieldDependencies = useCallback((fieldId: keyof FormValues) => {
-    return fieldDependencies[fieldId as string] || [];
-  }, [fieldDependencies]);
-  
+  const getFieldDependencies = useCallback(
+    (fieldId: keyof FormValues) => {
+      return fieldDependencies[fieldId as string] || [];
+    },
+    [fieldDependencies]
+  );
+
   /**
    * Check if a field should be displayed based on its conditions
    *
    * @param fieldId - The ID of the field
    * @returns Whether the field should be displayed
    */
-  const shouldDisplayField = useCallback((fieldId: keyof FormValues) => {
-    const condition = fieldConditions[fieldId as string];
-    if (!condition) return true;
-    
-    return condition.shouldDisplay(formValues);
-  }, [fieldConditions, formValues]);
-  
+  const shouldDisplayField = useCallback(
+    (fieldId: keyof FormValues) => {
+      const condition = fieldConditions[fieldId as string];
+      if (!condition) return true;
+
+      return condition.shouldDisplay(formValues);
+    },
+    [fieldConditions, formValues]
+  );
+
   /**
    * Transform a field value
    *
@@ -1022,25 +1057,24 @@ export const useFormBuilder = (
    * @param direction - The direction of transformation ('input' or 'output')
    * @returns The transformed value
    */
-  const transformField = useCallback((
-    fieldId: keyof FormValues,
-    value: any,
-    direction: 'input' | 'output'
-  ) => {
-    const transformation = fieldTransformations[fieldId as string];
-    if (!transformation) return value;
-    
-    if (direction === 'input' && transformation.input) {
-      return transformation.input(value);
-    }
-    
-    if (direction === 'output' && transformation.output) {
-      return transformation.output(value);
-    }
-    
-    return value;
-  }, [fieldTransformations]);
-  
+  const transformField = useCallback(
+    (fieldId: keyof FormValues, value: any, direction: 'input' | 'output') => {
+      const transformation = fieldTransformations[fieldId as string];
+      if (!transformation) return value;
+
+      if (direction === 'input' && transformation.input) {
+        return transformation.input(value);
+      }
+
+      if (direction === 'output' && transformation.output) {
+        return transformation.output(value);
+      }
+
+      return value;
+    },
+    [fieldTransformations]
+  );
+
   /**
    * Set a field value
    *
@@ -1048,113 +1082,115 @@ export const useFormBuilder = (
    * @param value - The value to set
    * @param options - Options for setting the value
    */
-  const setValue = useCallback((
-    name: keyof FormValues,
-    value: any,
-    options?: SetValueOptions
-  ) => {
-    // Apply input transformation if enabled
-    const transformedValue = options?.enableFieldTransformation === true
-      ? transformField(name, value, 'input')
-      : value;
-    
-    // Create an update object for validation
-    const updateObj = { [name]: transformedValue };
-    
-    // Special handling for password confirmation
-    if (name === 'password' && formValues.confirmPassword) {
-      // We'll need to validate confirmPassword with the new password value
-      setTimeout(() => {
-        validateField('confirmPassword', formValues.confirmPassword);
-      }, 0);
-    }
-    
-    // Check if this is a select field
-    const fieldConfig = config.rows.flatMap(row => row.columns).find(field => field.id === String(name));
-    const isSelectField = fieldConfig?.type === 'select';
-    const hasValue = transformedValue !== undefined && transformedValue !== null && transformedValue !== '';
-    
-    // Special handling for select fields with values
-    if (isSelectField && hasValue) {
-      // For select fields with values, mark them as pre-validated
-      setFormValues(prev => ({
-        ...prev,
-        [name]: transformedValue,
-        [`__prevalidated_${String(name)}`]: true
-      }));
-      
-      // Clear any validation errors for this field
-      setFormState(prev => {
-        const newErrors = { ...prev.errors };
-        delete newErrors[String(name)];
-        
-        return {
-          ...prev,
-          errors: newErrors,
-          isValid: Object.keys(newErrors).length === 0
-        };
-      });
-    } else {
-      // Normal update for other fields
-      setFormValues(prev => ({
-        ...prev,
-        [name]: transformedValue
-      }));
-    }
-    
-    if (options?.shouldDirty !== false) {
-      setFormState(prev => ({
-        ...prev,
-        isDirty: true,
-        dirtyFields: {
-          ...prev.dirtyFields,
-          [name]: true
-        }
-      }));
-    }
-    
-    if (options?.shouldTouch) {
-      setFormState(prev => ({
-        ...prev,
-        touchedFields: {
-          ...prev.touchedFields,
-          [name]: true
-        }
-      }));
-    }
-    
-    // Get the validation mode - first check setValue options, then fall back to global hook options
-    const validationMode = options?.mode !== undefined ? options.mode : options?.mode;
-    
-    // Determine if we should validate based on the validation mode
-    const shouldValidateBasedOnMode =
-      // Explicit validation request in options
-      options?.shouldValidate ||
-      // Or validation mode is set to validate on change
-      (validationMode === 'onChange' || validationMode === 'all');
-    
-    // Only validate if explicitly requested or if the mode is onChange/all
-    if (shouldValidateBasedOnMode && validationMode !== 'none') {
-      // Validate with the new value directly
-      validateField(name, transformedValue);
-      
-      // If automatic dependency revalidation is enabled, validate dependent fields
-      if (options?.enableAutomaticDependencyRevalidation === true) {
-        const dependentFields = getFieldDependencies(name);
-        dependentFields.forEach(depField => {
-          validateField(depField, formValues[depField]);
-        });
+  const setValue = useCallback(
+    (name: keyof FormValues, value: any, options?: SetValueOptions) => {
+      // Apply input transformation if enabled
+      const transformedValue =
+        options?.enableFieldTransformation === true ? transformField(name, value, 'input') : value;
+
+      // Create an update object for validation
+      const updateObj = { [name]: transformedValue };
+
+      // Special handling for password confirmation
+      if (name === 'password' && formValues.confirmPassword) {
+        // We'll need to validate confirmPassword with the new password value
+        setTimeout(() => {
+          validateField('confirmPassword', formValues.confirmPassword);
+        }, 0);
       }
-    }
-    
-    // Update field-level dirty state if enabled
-    if (options?.enableFieldLevelDirtyChecking === true && options?.shouldDirty !== false) {
-      setDirtyFields(prev => ({
-        ...prev,
-        [name]: true
-      }));
-    }
-  }, [formValues, validateField]);
+
+      // Check if this is a select field
+      const fieldConfig = config.rows
+        .flatMap((row) => row.columns)
+        .find((field) => field.id === String(name));
+      const isSelectField = fieldConfig?.type === 'select';
+      const hasValue =
+        transformedValue !== undefined && transformedValue !== null && transformedValue !== '';
+
+      // Special handling for select fields with values
+      if (isSelectField && hasValue) {
+        // For select fields with values, mark them as pre-validated
+        setFormValues((prev) => ({
+          ...prev,
+          [name]: transformedValue,
+          [`__prevalidated_${String(name)}`]: true,
+        }));
+
+        // Clear any validation errors for this field
+        setFormState((prev) => {
+          const newErrors = { ...prev.errors };
+          delete newErrors[String(name)];
+
+          return {
+            ...prev,
+            errors: newErrors,
+            isValid: Object.keys(newErrors).length === 0,
+          };
+        });
+      } else {
+        // Normal update for other fields
+        setFormValues((prev) => ({
+          ...prev,
+          [name]: transformedValue,
+        }));
+      }
+
+      if (options?.shouldDirty !== false) {
+        setFormState((prev) => ({
+          ...prev,
+          isDirty: true,
+          dirtyFields: {
+            ...prev.dirtyFields,
+            [name]: true,
+          },
+        }));
+      }
+
+      if (options?.shouldTouch) {
+        setFormState((prev) => ({
+          ...prev,
+          touchedFields: {
+            ...prev.touchedFields,
+            [name]: true,
+          },
+        }));
+      }
+
+      // Get the validation mode - first check setValue options, then fall back to global hook options
+      const validationMode = options?.mode !== undefined ? options.mode : options?.mode;
+
+      // Determine if we should validate based on the validation mode
+      const shouldValidateBasedOnMode =
+        // Explicit validation request in options
+        options?.shouldValidate ||
+        // Or validation mode is set to validate on change
+        validationMode === 'onChange' ||
+        validationMode === 'all';
+
+      // Only validate if explicitly requested or if the mode is onChange/all
+      if (shouldValidateBasedOnMode && validationMode !== 'none') {
+        // Validate with the new value directly
+        validateField(name, transformedValue);
+
+        // If automatic dependency revalidation is enabled, validate dependent fields
+        if (options?.enableAutomaticDependencyRevalidation === true) {
+          const dependentFields = getFieldDependencies(name);
+          dependentFields.forEach((depField) => {
+            validateField(depField, formValues[depField]);
+          });
+        }
+      }
+
+      // Update field-level dirty state if enabled
+      if (options?.enableFieldLevelDirtyChecking === true && options?.shouldDirty !== false) {
+        setDirtyFields((prev) => ({
+          ...prev,
+          [name]: true,
+        }));
+      }
+    },
+    [formValues, validateField]
+  );
 
   /**
    * Compose with another form
@@ -1162,96 +1198,102 @@ export const useFormBuilder = (
    * @param otherForm - Another form instance to compose with
    * @returns A combined form instance
    */
-  const composeWith = useCallback((otherForm: UseFormBuilderReturn) => {
-    // This is a simplified implementation of form composition
-    // A more complete implementation would merge all form state and methods
-    
-    // Merge form values
-    const mergedValues = {
-      ...formValues,
-      ...otherForm.state.raw
-    };
-    
-    // Create a new form state
-    const mergedFormState = {
-      ...formState,
-      errors: {
-        ...formState.errors,
-        ...otherForm.formState.errors
-      },
-      dirtyFields: {
-        ...formState.dirtyFields,
-        ...otherForm.formState.dirtyFields
-      },
-      touchedFields: {
-        ...formState.touchedFields,
-        ...otherForm.formState.touchedFields
-      },
-      isValid: formState.isValid && otherForm.formState.isValid
-    };
-    
-    // Return a new form instance with merged state
-    // This is a simplified version - a real implementation would need to merge all methods too
-    return {
-      state: {
-        raw: mergedValues,
-        masked: {
-          ...maskedValues,
-          ...otherForm.state.masked
-        }
-      },
-      formState: mergedFormState,
-      // Include all the methods from the current form
-      setFormState,
-      resetForm,
-      resetField,
-      setFieldFocus,
-      validateField,
-      arrayFields,
-      setValue,
-      watch,
-      handleSubmit,
-      control: form,
-      getValues,
-      Form,
-      setLoading,
-      setFieldLoading,
-      getFieldDependencies,
-      shouldDisplayField,
-      transformField,
-      composeWith
-    };
-  }, [formValues, formState, maskedValues]);
-  
+  const composeWith = useCallback(
+    (otherForm: UseFormBuilderReturn) => {
+      // This is a simplified implementation of form composition
+      // A more complete implementation would merge all form state and methods
+
+      // Merge form values
+      const mergedValues = {
+        ...formValues,
+        ...otherForm.state.raw,
+      };
+
+      // Create a new form state
+      const mergedFormState = {
+        ...formState,
+        errors: {
+          ...formState.errors,
+          ...otherForm.formState.errors,
+        },
+        dirtyFields: {
+          ...formState.dirtyFields,
+          ...otherForm.formState.dirtyFields,
+        },
+        touchedFields: {
+          ...formState.touchedFields,
+          ...otherForm.formState.touchedFields,
+        },
+        isValid: formState.isValid && otherForm.formState.isValid,
+      };
+
+      // Return a new form instance with merged state
+      // This is a simplified version - a real implementation would need to merge all methods too
+      return {
+        state: {
+          raw: mergedValues,
+          masked: {
+            ...maskedValues,
+            ...otherForm.state.masked,
+          },
+        },
+        formState: mergedFormState,
+        // Include all the methods from the current form
+        setFormState,
+        resetForm,
+        resetField,
+        setFieldFocus,
+        validateField,
+        arrayFields,
+        setValue,
+        watch,
+        handleSubmit,
+        control: form,
+        getValues,
+        Form,
+        setLoading,
+        setFieldLoading,
+        getFieldDependencies,
+        shouldDisplayField,
+        transformField,
+        composeWith,
+      };
+    },
+    [formValues, formState, maskedValues]
+  );
+
   /**
    * Watch a field value
    *
    * @param name - The name of the field to watch
    * @returns The field value
    */
-  const watch = useCallback((name?: keyof FormValues) => {
-    if (name) {
-      // Apply output transformation if enabled
-      return options?.enableFieldTransformation === true
-        ? transformField(name, formValues[name], 'output')
-        : formValues[name];
-    }
-    
-    // If watching all values and transformations are enabled, transform all values
-    if (options?.enableFieldTransformation === true) {
-      const transformedValues = { ...formValues };
-      Object.keys(fieldTransformations).forEach(fieldId => {
-        transformedValues[fieldId] = transformField(
-          fieldId as keyof FormValues,
-          formValues[fieldId],
-          'output'
-        );
-      });
-      return transformedValues;
-    }
-    
-    return formValues;
-  }, [formValues]);
+  const watch = useCallback(
+    (name?: keyof FormValues) => {
+      if (name) {
+        // Apply output transformation if enabled
+        return options?.enableFieldTransformation === true
+          ? transformField(name, formValues[name], 'output')
+          : formValues[name];
+      }
+
+      // If watching all values and transformations are enabled, transform all values
+      if (options?.enableFieldTransformation === true) {
+        const transformedValues = { ...formValues };
+        Object.keys(fieldTransformations).forEach((fieldId) => {
+          transformedValues[fieldId] = transformField(
+            fieldId as keyof FormValues,
+            formValues[fieldId],
+            'output'
+          );
+        });
+        return transformedValues;
+      }
+
+      return formValues;
+    },
+    [formValues]
+  );
 
   /**
    * Handle form submission
@@ -1259,210 +1301,206 @@ export const useFormBuilder = (
    * @param onSubmit - The function to call when the form is submitted
    * @returns A function that handles the form submission event
    */
-  const handleSubmit = useCallback((onSubmit: (data: FormValues) => void) => {
-    // Create a debounced version of the submission handler if debounce is enabled
-    const debouncedSubmit = options.submitDebounce
-      ? debounce(onSubmit, options.submitDebounce)
-      : onSubmit;
-    return async (e: React.FormEvent) => {
-      e.preventDefault();
-      
-      // Set form to submitting state and mark as submitted
-      setFormState(prev => ({
-        ...prev,
-        isSubmitting: true,
-        isSubmitted: true,
-        submitCount: prev.submitCount + 1
-      }));
-      
-      // Only validate on submit if the mode is onSubmit, all, or not specified
-      const shouldValidateOnSubmit =
-        options.mode === undefined ||
-        options.mode === 'onSubmit' ||
-        options.mode === 'all';
-      
-      if (!shouldValidateOnSubmit) {
-        // Skip validation and just submit the form
-        try {
-          const submissionValues = options?.enableFieldTransformation === true
-            ? Object.keys(formValues).reduce((acc, key) => {
-                acc[key] = transformField(
-                  key as keyof FormValues,
-                  formValues[key],
-                  'output'
-                );
-                return acc;
-              }, {} as FormValues)
-            : formValues;
-          
-          // Show loading state for a short time, then submit
-          setTimeout(async () => {
-            try {
-              // Call the submit function
-              await debouncedSubmit(submissionValues);
-              
-              // Set success state immediately
-              setFormState(prev => ({
-                ...prev,
-                isSubmitting: false,
-                isSubmitted: true,
-                isSubmitSuccessful: true
-              }));
-            } catch (error) {
-              // Handle errors
-              setTimeout(() => {
-                setFormState(prev => ({
+  const handleSubmit = useCallback(
+    (onSubmit: (data: FormValues) => void) => {
+      // Create a debounced version of the submission handler if debounce is enabled
+      const debouncedSubmit = options.submitDebounce
+        ? debounce(onSubmit, options.submitDebounce)
+        : onSubmit;
+      return async (e: React.FormEvent) => {
+        e.preventDefault();
+
+        // Set form to submitting state and mark as submitted
+        setFormState((prev) => ({
+          ...prev,
+          isSubmitting: true,
+          isSubmitted: true,
+          submitCount: prev.submitCount + 1,
+        }));
+
+        // Only validate on submit if the mode is onSubmit, all, or not specified
+        const shouldValidateOnSubmit =
+          options.mode === undefined || options.mode === 'onSubmit' || options.mode === 'all';
+
+        if (!shouldValidateOnSubmit) {
+          // Skip validation and just submit the form
+          try {
+            const submissionValues =
+              options?.enableFieldTransformation === true
+                ? Object.keys(formValues).reduce((acc, key) => {
+                    acc[key] = transformField(key as keyof FormValues, formValues[key], 'output');
+                    return acc;
+                  }, {} as FormValues)
+                : formValues;
+
+            // Show loading state for a short time, then submit
+            setTimeout(async () => {
+              try {
+                // Call the submit function
+                await debouncedSubmit(submissionValues);
+
+                // Set success state immediately
+                setFormState((prev) => ({
                   ...prev,
                   isSubmitting: false,
-                  isSubmitSuccessful: false
+                  isSubmitted: true,
+                  isSubmitSuccessful: true,
                 }));
-              }, 300);
-            }
-          }, 100);
-          
-          return;
-        } catch (error) {
-          // Set error state after a short delay
-          setTimeout(() => {
-            setFormState(prev => ({
-              ...prev,
-              isSubmitting: false,
-              isSubmitSuccessful: false
-            }));
-          }, 300);
-          return;
-        }
-      }
-      
-      // Validate all fields
-      const errors: Record<string, FieldError> = {};
-      let isValid = true;
-      
-      config.rows.forEach(row => {
-        row.columns.forEach(field => {
-          // Skip validation for fields that shouldn't be displayed
-          if (field.condition && !shouldDisplayField(field.id as keyof FormValues)) {
+              } catch (error) {
+                // Handle errors
+                setTimeout(() => {
+                  setFormState((prev) => ({
+                    ...prev,
+                    isSubmitting: false,
+                    isSubmitSuccessful: false,
+                  }));
+                }, 300);
+              }
+            }, 100);
+
+            return;
+          } catch (error) {
+            // Set error state after a short delay
+            setTimeout(() => {
+              setFormState((prev) => ({
+                ...prev,
+                isSubmitting: false,
+                isSubmitSuccessful: false,
+              }));
+            }, 300);
             return;
           }
-          
-          // Get the value, applying any transformations if needed
-          const fieldValue = options?.enableFieldTransformation === true
-            ? transformField(field.id as keyof FormValues, formValues[field.id], 'input')
-            : formValues[field.id];
-          
-          // Special handling for select fields with default values
-          const isSelectField = field.type === 'select';
-          const hasValue = fieldValue !== undefined && fieldValue !== null && fieldValue !== '';
-          
-          // Always skip validation for select fields that have any value
-          const shouldSkipValidation = isSelectField && hasValue;
-          
-          // Only validate if we shouldn't skip validation
-          if (!shouldSkipValidation) {
-            // Validate the field
-            const result = validateSingleField(field.id, fieldValue, config, formValues);
-            if (!result.isValid && result.error) {
-              errors[field.id] = {
-                type: 'validation',
-                message: result.error
-              };
-              isValid = false;
-            }
-          }
-        });
-      });
-      setFormState(prev => ({
-        ...prev,
-        errors,
-        isValid,
-        // If there are validation errors, stop the submitting state
-        isSubmitting: isValid ? prev.isSubmitting : false
-      }));
-      
-      // Perform form-level validation if provided
-      let formLevelErrors: Record<string, string> | null = null;
-      if (options.formValidation) {
-        formLevelErrors = options.formValidation(formValues);
-        
-        if (formLevelErrors) {
-          // Add form-level errors to the form state
-          const newErrors = { ...errors };
-          
-          Object.entries(formLevelErrors).forEach(([fieldId, errorMessage]) => {
-            newErrors[fieldId] = {
-              type: 'validation',
-              message: errorMessage
-            };
-          });
-          
-          setFormState(prev => ({
-            ...prev,
-            errors: newErrors,
-            isValid: false,
-            // If there are form-level validation errors, stop the submitting state
-            isSubmitting: false
-          }));
-          
-          isValid = false;
         }
-      }
-      
-      if (isValid) {
-        try {
-          // Call the user's onSubmit handler
-          // Apply output transformations to all values if enabled
-          const submissionValues = options?.enableFieldTransformation === true
-            ? Object.keys(formValues).reduce((acc, key) => {
-                acc[key] = transformField(
-                  key as keyof FormValues,
-                  formValues[key],
-                  'output'
-                );
-                return acc;
-              }, {} as FormValues)
-            : formValues;
-          
-          // Show loading state for a short time, then submit
-          setTimeout(async () => {
-            try {
-              // Call the submit function
-              await debouncedSubmit(submissionValues);
-              
-              // Set success state immediately
-              setFormState(prev => ({
-                ...prev,
-                isSubmitting: false,
-                isSubmitted: true,
-                isSubmitSuccessful: true
-              }));
-            } catch (error) {
-              // Handle errors
-              setTimeout(() => {
-                setFormState(prev => ({
+
+        // Validate all fields
+        const errors: Record<string, FieldError> = {};
+        let isValid = true;
+
+        config.rows.forEach((row) => {
+          row.columns.forEach((field) => {
+            // Skip validation for fields that shouldn't be displayed
+            if (field.condition && !shouldDisplayField(field.id as keyof FormValues)) {
+              return;
+            }
+
+            // Get the value, applying any transformations if needed
+            const fieldValue =
+              options?.enableFieldTransformation === true
+                ? transformField(field.id as keyof FormValues, formValues[field.id], 'input')
+                : formValues[field.id];
+
+            // Special handling for select fields with default values
+            const isSelectField = field.type === 'select';
+            const hasValue = fieldValue !== undefined && fieldValue !== null && fieldValue !== '';
+
+            // Always skip validation for select fields that have any value
+            const shouldSkipValidation = isSelectField && hasValue;
+
+            // Only validate if we shouldn't skip validation
+            if (!shouldSkipValidation) {
+              // Validate the field
+              const result = validateSingleField(field.id, fieldValue, config, formValues);
+              if (!result.isValid && result.error) {
+                errors[field.id] = {
+                  type: 'validation',
+                  message: result.error,
+                };
+                isValid = false;
+              }
+            }
+          });
+        });
+        setFormState((prev) => ({
+          ...prev,
+          errors,
+          isValid,
+          // If there are validation errors, stop the submitting state
+          isSubmitting: isValid ? prev.isSubmitting : false,
+        }));
+
+        // Perform form-level validation if provided
+        let formLevelErrors: Record<string, string> | null = null;
+        if (options.formValidation) {
+          formLevelErrors = options.formValidation(formValues);
+
+          if (formLevelErrors) {
+            // Add form-level errors to the form state
+            const newErrors = { ...errors };
+
+            Object.entries(formLevelErrors).forEach(([fieldId, errorMessage]) => {
+              newErrors[fieldId] = {
+                type: 'validation',
+                message: errorMessage,
+              };
+            });
+
+            setFormState((prev) => ({
+              ...prev,
+              errors: newErrors,
+              isValid: false,
+              // If there are form-level validation errors, stop the submitting state
+              isSubmitting: false,
+            }));
+
+            isValid = false;
+          }
+        }
+
+        if (isValid) {
+          try {
+            // Call the user's onSubmit handler
+            // Apply output transformations to all values if enabled
+            const submissionValues =
+              options?.enableFieldTransformation === true
+                ? Object.keys(formValues).reduce((acc, key) => {
+                    acc[key] = transformField(key as keyof FormValues, formValues[key], 'output');
+                    return acc;
+                  }, {} as FormValues)
+                : formValues;
+
+            // Show loading state for a short time, then submit
+            setTimeout(async () => {
+              try {
+                // Call the submit function
+                await debouncedSubmit(submissionValues);
+
+                // Set success state immediately
+                setFormState((prev) => ({
                   ...prev,
                   isSubmitting: false,
-                  isSubmitSuccessful: false
+                  isSubmitted: true,
+                  isSubmitSuccessful: true,
                 }));
-              }, 300);
-            }
-          }, 100);
-        } catch (error) {
-          // Set error state after a short delay
-          setTimeout(() => {
-            setFormState(prev => ({
-              ...prev,
-              isSubmitting: false,
-              isSubmitSuccessful: false
-            }));
-          }, 300);
+              } catch (error) {
+                // Handle errors
+                setTimeout(() => {
+                  setFormState((prev) => ({
+                    ...prev,
+                    isSubmitting: false,
+                    isSubmitSuccessful: false,
+                  }));
+                }, 300);
+              }
+            }, 100);
+          } catch (error) {
+            // Set error state after a short delay
+            setTimeout(() => {
+              setFormState((prev) => ({
+                ...prev,
+                isSubmitting: false,
+                isSubmitSuccessful: false,
+              }));
+            }, 300);
+          }
         }
-      }
-    };
-  }, [config, formValues, form]);
+      };
+    },
+    [config, formValues, form]
+  );
 
   /**
    * Set focus to a field
-   * 
+   *
    * @param name - The name of the field to focus
    */
   const setFieldFocus = useCallback((name: keyof FormValues) => {
@@ -1478,29 +1516,32 @@ export const useFormBuilder = (
    * @param name - The name of the field to get
    * @returns The field value or all form values
    */
-  const getValues = useCallback((name?: keyof FormValues) => {
-    if (name) {
-      // Apply output transformation if enabled
-      return options?.enableFieldTransformation === true
-        ? transformField(name, formValues[name], 'output')
-        : formValues[name];
-    }
-    
-    // If getting all values and transformations are enabled, transform all values
-    if (options?.enableFieldTransformation === true) {
-      const transformedValues = { ...formValues };
-      Object.keys(fieldTransformations).forEach(fieldId => {
-        transformedValues[fieldId] = transformField(
-          fieldId as keyof FormValues,
-          formValues[fieldId],
-          'output'
-        );
-      });
-      return transformedValues;
-    }
-    
-    return formValues;
-  }, [formValues]);
+  const getValues = useCallback(
+    (name?: keyof FormValues) => {
+      if (name) {
+        // Apply output transformation if enabled
+        return options?.enableFieldTransformation === true
+          ? transformField(name, formValues[name], 'output')
+          : formValues[name];
+      }
+
+      // If getting all values and transformations are enabled, transform all values
+      if (options?.enableFieldTransformation === true) {
+        const transformedValues = { ...formValues };
+        Object.keys(fieldTransformations).forEach((fieldId) => {
+          transformedValues[fieldId] = transformField(
+            fieldId as keyof FormValues,
+            formValues[fieldId],
+            'output'
+          );
+        });
+        return transformedValues;
+      }
+
+      return formValues;
+    },
+    [formValues]
+  );
 
   /**
    * Create a Form component to provide context
@@ -1510,21 +1551,27 @@ export const useFormBuilder = (
   }, []);
 
   // Apply performance optimizations if enabled
-  const memoizedState = useMemo(() => ({
-    raw: formValues,
-    masked: maskedValues
-  }), [formValues, maskedValues]);
-  
+  const memoizedState = useMemo(
+    () => ({
+      raw: formValues,
+      masked: maskedValues,
+    }),
+    [formValues, maskedValues]
+  );
+
   const memoizedFormState = useMemo(() => formState, [formState]);
-  
+
   // No validation on mount as per user request
   // Validation will only happen on user interaction or form submission
-  
+
   return {
-    state: options?.enablePerformanceOptimizations === true ? memoizedState : {
-      raw: formValues,
-      masked: maskedValues
-    },
+    state:
+      options?.enablePerformanceOptimizations === true
+        ? memoizedState
+        : {
+            raw: formValues,
+            masked: maskedValues,
+          },
     formState: options?.enablePerformanceOptimizations === true ? memoizedFormState : formState,
     setFormState, // Expose the setFormState function
     resetForm,
@@ -1543,6 +1590,6 @@ export const useFormBuilder = (
     getFieldDependencies,
     shouldDisplayField,
     transformField,
-    composeWith
+    composeWith,
   };
 };

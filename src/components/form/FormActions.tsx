@@ -6,11 +6,7 @@ interface FormActionsProps {
   isDirty: boolean;
 }
 
-export const FormActions = memo<FormActionsProps>(({
-  onReset,
-  isSubmitting,
-  isDirty
-}) => {
+export const FormActions = memo<FormActionsProps>(({ onReset, isSubmitting, isDirty }) => {
   return (
     <div className="flex justify-end space-x-4 mt-8">
       <button

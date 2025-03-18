@@ -1,4 +1,4 @@
-import { FormValues } from '../types/form';
+import type { FormValues } from '../types/form';
 
 interface ApiResponse {
   success: boolean;
@@ -8,7 +8,7 @@ interface ApiResponse {
 
 export const submitFormData = async (data: FormValues): Promise<ApiResponse> => {
   // Simulate API call
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  await new Promise((resolve) => setTimeout(resolve, 1000));
 
   // Simulate successful response
   return {
@@ -19,7 +19,7 @@ export const submitFormData = async (data: FormValues): Promise<ApiResponse> => 
       // Ensure all array fields are initialized
       skills: data.skills || [],
       emails: data.emails || [''],
-      addresses: data.addresses || ['']
-    }
+      addresses: data.addresses || [''],
+    },
   };
 };

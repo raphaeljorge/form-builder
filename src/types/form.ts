@@ -7,7 +7,7 @@ export const baseSchema = z.object({
   country: z.string().optional(),
   state: z.string().optional(),
   password: z.string().optional(),
-  confirmPassword: z.string().optional()
+  confirmPassword: z.string().optional(),
 });
 
 // Helper to create a validation schema with array fields
@@ -198,14 +198,14 @@ export interface EnhancedFormState {
 }
 
 // Type guard functions
-export const isTextFieldConfig = (config: FieldConfig): config is TextFieldConfig => 
+export const isTextFieldConfig = (config: FieldConfig): config is TextFieldConfig =>
   config.type === 'text';
 
-export const isSelectFieldConfig = (config: FieldConfig): config is SelectFieldConfig => 
+export const isSelectFieldConfig = (config: FieldConfig): config is SelectFieldConfig =>
   config.type === 'select';
 
-export const isArrayFieldConfig = (config: FieldConfig): config is ArrayFieldConfig => 
+export const isArrayFieldConfig = (config: FieldConfig): config is ArrayFieldConfig =>
   config.type === 'array';
 
-export const isChipFieldConfig = (config: FieldConfig): config is ChipFieldConfig => 
+export const isChipFieldConfig = (config: FieldConfig): config is ChipFieldConfig =>
   config.type === 'chip';

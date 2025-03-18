@@ -1,7 +1,7 @@
-import React from 'react';
-import { ArrayFieldConfig, TextFieldConfig } from '../../types/form';
-import { TextField } from './TextField';
+import type React from 'react';
 import { useFormContext } from '../../context/FormContext';
+import type { ArrayFieldConfig, TextFieldConfig } from '../../types/form';
+import { TextField } from './TextField';
 
 interface ArrayFieldProps {
   config: ArrayFieldConfig;
@@ -16,21 +16,21 @@ export const ArrayField: React.FC<ArrayFieldProps> = ({
   value = [],
   onChange,
   error,
-  disabled
+  disabled,
 }) => {
   const { setValue, getValues } = useFormContext();
 
   const handleItemChange = (index: number, itemValue: string) => {
     const currentValues = [...(getValues(config.id) || [])];
     currentValues[index] = itemValue;
-    
+
     // Update form state
     setValue(config.id, currentValues, {
       shouldDirty: true,
       shouldTouch: true,
-      shouldValidate: true
+      shouldValidate: true,
     });
-    
+
     // Notify parent component
     onChange(currentValues);
   };
@@ -38,10 +38,9 @@ export const ArrayField: React.FC<ArrayFieldProps> = ({
   // Create text field config from template
   const createTextFieldConfig = (index: number): TextFieldConfig => {
     // Support for dynamic templates based on index
-    const template = typeof config.template === 'function'
-      ? config.template(index)
-      : config.template;
-      
+    const template =
+      typeof config.template === 'function' ? config.template(index) : config.template;
+
     if (template.type !== 'text') {
       throw new Error('Array field template must be of type text');
     }
@@ -50,13 +49,13 @@ export const ArrayField: React.FC<ArrayFieldProps> = ({
       ...template,
       id: `${config.id}-${index}`,
       label: template.label || `${config.label} ${index + 1}`,
-      type: 'text'
+      type: 'text',
     };
   };
 
   return (
     <div className="w-full">
-      <label className="block text-sm font-medium text-gray-700 mb-1">
+      <label htmlFor={config.id} className="block text-sm font-medium text-gray-700 mb-1">
         {config.label}
         {config.required && <span className="text-red-500 ml-1">*</span>}
       </label>
@@ -73,9 +72,7 @@ export const ArrayField: React.FC<ArrayFieldProps> = ({
           </div>
         ))}
       </div>
-      {error && (
-        <p className="mt-1 text-sm text-red-600">{error}</p>
-      )}
+      {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
     </div>
   );
 };

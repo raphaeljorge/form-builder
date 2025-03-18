@@ -1,12 +1,17 @@
-import React, { memo, useMemo, useState, useEffect } from 'react';
-import { EnhancedFormBuilder } from './components/EnhancedFormBuilder';
-import { formConfig } from './config/formConfig';
-import type { RowWrapperProps, FormValues } from './types/form';
-import { FormProvider, useFormContext } from './context/FormContext';
 import { QueryClient, QueryClientProvider, useMutation } from '@tanstack/react-query';
-import { submitFormData } from './services/api';
-import { useFormBuilder, FieldTransformation, FieldCondition } from './hooks/useFormBuilder';
+import type React from 'react';
+import { memo, useEffect, useMemo, useState } from 'react';
+import { EnhancedFormBuilder } from './components/EnhancedFormBuilder';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { formConfig } from './config/formConfig';
+import { FormProvider, useFormContext } from './context/FormContext';
+import {
+  type FieldCondition,
+  type FieldTransformation,
+  useFormBuilder,
+} from './hooks/useFormBuilder';
+import { submitFormData } from './services/api';
+import type { FormValues, RowWrapperProps } from './types/form';
 
 const queryClient = new QueryClient();
 
@@ -27,8 +32,8 @@ const config = {
   ...formConfig,
   rows: formConfig.rows.map((row, index) => ({
     ...row,
-    RowWrapper: index === 0 ? PrimaryRowWrapper : SecondaryRowWrapper
-  }))
+    RowWrapper: index === 0 ? PrimaryRowWrapper : SecondaryRowWrapper,
+  })),
 };
 
 // Initialize default values based on config
@@ -47,9 +52,9 @@ const getDefaultValues = () => {
     showAdvanced: false,
     advancedField: '',
     formattedNumber: '1000',
-    dynamicArrayField: ['Item 1']
+    dynamicArrayField: ['Item 1'],
   };
-  
+
   return defaultValues;
 };
 
@@ -64,13 +69,13 @@ const numberTransformation: FieldTransformation = {
   input: (value) => {
     if (!value) return '';
     return value.toString().replace(/,/g, '');
-  }
+  },
 };
 
 // Example field condition
 const advancedFieldCondition: FieldCondition = {
   dependsOn: ['showAdvanced'],
-  shouldDisplay: (values) => values.showAdvanced === true
+  shouldDisplay: (values) => values.showAdvanced === true,
 };
 
 const ArrayFieldControls = () => {
@@ -81,7 +86,7 @@ const ArrayFieldControls = () => {
     setValue('emails', [...currentEmails, ''], {
       shouldDirty: true,
       shouldTouch: true,
-      shouldValidate: true
+      shouldValidate: true,
     });
   };
 
@@ -90,32 +95,40 @@ const ArrayFieldControls = () => {
     setValue('addresses', [...currentAddresses, ''], {
       shouldDirty: true,
       shouldTouch: true,
-      shouldValidate: true
+      shouldValidate: true,
     });
   };
 
   const handleRemoveEmail = (index: number) => {
     const currentEmails = (getValues('emails') || []) as string[];
-    setValue('emails', currentEmails.filter((_: string, i: number) => i !== index), {
-      shouldDirty: true,
-      shouldTouch: true,
-      shouldValidate: true
-    });
+    setValue(
+      'emails',
+      currentEmails.filter((_: string, i: number) => i !== index),
+      {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      }
+    );
   };
 
   const handleRemoveAddress = (index: number) => {
     const currentAddresses = (getValues('addresses') || []) as string[];
-    setValue('addresses', currentAddresses.filter((_: string, i: number) => i !== index), {
-      shouldDirty: true,
-      shouldTouch: true,
-      shouldValidate: true
-    });
+    setValue(
+      'addresses',
+      currentAddresses.filter((_: string, i: number) => i !== index),
+      {
+        shouldDirty: true,
+        shouldTouch: true,
+        shouldValidate: true,
+      }
+    );
   };
 
   return (
     <div className="mt-6 p-4 bg-white rounded-lg shadow">
       <h2 className="text-xl font-semibold mb-4">Array Field Controls</h2>
-      
+
       {/* Email Array Controls */}
       <div className="mb-6">
         <h3 className="text-lg font-medium mb-2">Email Addresses:</h3>
@@ -174,8 +187,8 @@ const FormControls = () => {
       keepErrors: true,
       keepValues: true,
       keepTouched: true,
-      keepDirty: true
-    }
+      keepDirty: true,
+    },
   };
 
   // Loading state controls
@@ -196,7 +209,7 @@ const FormControls = () => {
   return (
     <div className="mt-6 p-4 bg-white rounded-lg shadow">
       <h2 className="text-xl font-semibold mb-4">Form Controls</h2>
-      
+
       <div className="space-y-6">
         {/* Field Focus Controls */}
         <div>
@@ -319,19 +332,21 @@ const FormStateDisplay = () => {
     submitCount = 0,
     errors = {},
     dirtyFields = {},
-    loadingFields = {}
+    loadingFields = {},
   } = formState;
 
   return (
     <div className="mt-8 space-y-6">
       <div className="p-4 bg-white rounded-lg shadow">
         <h2 className="text-xl font-semibold mb-4">Form Values:</h2>
-        
+
         <div className="mb-6">
           <h3 className="text-lg font-medium mb-2">Quick Access Values:</h3>
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 bg-gray-100 rounded">
-              <p><strong>Phone:</strong></p>
+              <p>
+                <strong>Phone:</strong>
+              </p>
               <p>Raw: {raw.phone}</p>
               <p>Masked: {masked.phone}</p>
               <p className="mt-2 text-sm text-gray-600">
@@ -339,7 +354,9 @@ const FormStateDisplay = () => {
               </p>
             </div>
             <div className="p-4 bg-gray-100 rounded">
-              <p><strong>Country:</strong> {raw.country}</p>
+              <p>
+                <strong>Country:</strong> {raw.country}
+              </p>
               <p className="mt-2 text-sm text-gray-600">
                 Changed: {dirtyFields.country ? 'Yes' : 'No'}
               </p>
@@ -350,22 +367,18 @@ const FormStateDisplay = () => {
         <div className="grid grid-cols-2 gap-4">
           <div>
             <h3 className="text-lg font-medium mb-2">Masked Values:</h3>
-            <pre className="bg-gray-100 p-4 rounded">
-              {JSON.stringify(masked, null, 2)}
-            </pre>
+            <pre className="bg-gray-100 p-4 rounded">{JSON.stringify(masked, null, 2)}</pre>
           </div>
           <div>
             <h3 className="text-lg font-medium mb-2">Raw Values:</h3>
-            <pre className="bg-gray-100 p-4 rounded">
-              {JSON.stringify(raw, null, 2)}
-            </pre>
+            <pre className="bg-gray-100 p-4 rounded">{JSON.stringify(raw, null, 2)}</pre>
           </div>
         </div>
       </div>
 
       <div className="p-4 bg-white rounded-lg shadow">
         <h2 className="text-xl font-semibold mb-4">Form State:</h2>
-        
+
         <div className="grid grid-cols-2 gap-4">
           <div>
             <h3 className="text-lg font-medium mb-2">Status:</h3>
@@ -431,28 +444,29 @@ const FormStateDisplay = () => {
           <h3 className="text-lg font-medium mb-2">Loading State:</h3>
           <div className={`p-4 rounded ${isLoading ? 'bg-purple-50' : 'bg-gray-50'}`}>
             <div className="flex items-center mb-3">
-              <div className={`w-3 h-3 rounded-full mr-2 ${isLoading ? 'bg-purple-500' : 'bg-gray-300'}`}></div>
+              <div
+                className={`w-3 h-3 rounded-full mr-2 ${isLoading ? 'bg-purple-500' : 'bg-gray-300'}`}
+              ></div>
               <p className={isLoading ? 'text-purple-800 font-medium' : 'text-gray-500'}>
                 Form Loading State: {isLoading ? 'Active' : 'Inactive'}
               </p>
             </div>
-            
+
             {Object.keys(loadingFields).length > 0 ? (
               <>
                 <p className="mb-2 text-purple-800 font-medium">Fields currently loading:</p>
                 <div className="flex flex-wrap gap-2">
-                  {Object.entries(loadingFields).map(([fieldId, isFieldLoading]) => (
-                    isFieldLoading && (
-                      <div key={fieldId} className="flex items-center">
-                        <span
-                          className="px-3 py-1 bg-purple-200 text-purple-800 rounded-full text-sm flex items-center"
-                        >
-                          <span className="w-2 h-2 bg-purple-500 rounded-full mr-2 animate-pulse"></span>
-                          {fieldId}
-                        </span>
-                      </div>
-                    )
-                  ))}
+                  {Object.entries(loadingFields).map(
+                    ([fieldId, isFieldLoading]) =>
+                      isFieldLoading && (
+                        <div key={fieldId} className="flex items-center">
+                          <span className="px-3 py-1 bg-purple-200 text-purple-800 rounded-full text-sm flex items-center">
+                            <span className="w-2 h-2 bg-purple-500 rounded-full mr-2 animate-pulse"></span>
+                            {fieldId}
+                          </span>
+                        </div>
+                      )
+                  )}
                 </div>
               </>
             ) : (
@@ -481,7 +495,7 @@ interface FormWithQueryProps {
 
 const FormWithQuery: React.FC<FormWithQueryProps> = ({
   externalLoading = false,
-  loadingFields = {}
+  loadingFields = {},
 }) => {
   // Memoize default values
   const defaultValues = useMemo(() => getDefaultValues(), []);
@@ -504,15 +518,15 @@ const FormWithQuery: React.FC<FormWithQueryProps> = ({
             label: 'Show Advanced Options',
             options: [
               { value: 'true', label: 'Yes' },
-              { value: 'false', label: 'No' }
+              { value: 'false', label: 'No' },
             ],
             transform: {
               // Transform string 'true'/'false' to boolean
               input: (value: string) => value === 'true',
-              output: (value: boolean) => value === true ? 'true' : 'false'
-            }
-          }
-        ]
+              output: (value: boolean) => (value === true ? 'true' : 'false'),
+            },
+          },
+        ],
       },
       // Conditional field that only shows when showAdvanced is true
       {
@@ -524,9 +538,9 @@ const FormWithQuery: React.FC<FormWithQueryProps> = ({
             type: 'text' as const,
             label: 'Advanced Setting',
             placeholder: 'Only visible when advanced options are enabled',
-            condition: advancedFieldCondition
-          }
-        ]
+            condition: advancedFieldCondition,
+          },
+        ],
       },
       // Field with transformation
       {
@@ -541,10 +555,10 @@ const FormWithQuery: React.FC<FormWithQueryProps> = ({
             transform: numberTransformation,
             validation: {
               pattern: '^[0-9,]+$',
-              message: 'Please enter a valid number'
-            }
-          }
-        ]
+              message: 'Please enter a valid number',
+            },
+          },
+        ],
       },
       // Dynamic array field
       {
@@ -568,13 +582,13 @@ const FormWithQuery: React.FC<FormWithQueryProps> = ({
                     return 'First item must start with "Item"';
                   }
                   return true;
-                }
-              }
-            })
-          }
-        ]
-      }
-    ]
+                },
+              },
+            }),
+          },
+        ],
+      },
+    ],
   };
 
   const formMethods = useFormBuilder(enhancedConfig, {
@@ -586,59 +600,60 @@ const FormWithQuery: React.FC<FormWithQueryProps> = ({
     formValidation: (values) => {
       // Example of form-level validation
       const errors: Record<string, string> = {};
-      
+
       // Cross-field validation
       if (values.formattedNumber && values.advancedField) {
         const numValue = Number(values.formattedNumber.toString().replace(/,/g, ''));
         if (numValue > 10000 && values.advancedField.length < 5) {
-          errors.advancedField = 'Advanced field must be at least 5 characters when number is > 10,000';
+          errors.advancedField =
+            'Advanced field must be at least 5 characters when number is > 10,000';
         }
       }
-      
+
       return Object.keys(errors).length > 0 ? errors : null;
     },
-    defaultValues
+    defaultValues,
   });
 
   const mutation = useMutation({
     mutationFn: submitFormData,
     onSuccess: (response) => {
       console.log('Form submitted successfully:', response.data);
-      
+
       // Update form state to reflect successful submission
-      formMethods.setFormState(prev => ({
+      formMethods.setFormState((prev) => ({
         ...prev,
         isSubmitted: true,
         isSubmitSuccessful: true,
-        isSubmitting: false
+        isSubmitting: false,
       }));
-      
+
       setIsSubmitting(false);
     },
     onError: (error: Error) => {
       console.error('Error submitting form:', error);
       setIsSubmitting(false);
-    }
+    },
   });
   const handleSubmit = (data: FormValues) => {
     // Set loading state and mark form as submitted
     setIsSubmitting(true);
     formMethods.setLoading(true);
-    
+
     // Explicitly mark the form as submitted
-    formMethods.setFormState(prev => ({
+    formMethods.setFormState((prev) => ({
       ...prev,
       isSubmitted: true,
-      submitCount: prev.submitCount + 1
+      submitCount: prev.submitCount + 1,
     }));
-    
+
     // Apply any external loading states to specific fields
     Object.entries(loadingFields).forEach(([fieldId, isLoading]) => {
       if (isLoading) {
         formMethods.setFieldLoading(fieldId as keyof FormValues, true);
       }
     });
-    
+
     // Simulate API delay
     setTimeout(() => {
       // Ensure all arrays are initialized
@@ -646,11 +661,11 @@ const FormWithQuery: React.FC<FormWithQueryProps> = ({
         ...data,
         skills: data.skills || [],
         emails: data.emails || [''],
-        addresses: data.addresses || ['']
+        addresses: data.addresses || [''],
       };
-      
+
       mutation.mutate(formData);
-      
+
       // Note: We don't reset loading state here because it will be reset
       // in the mutation callbacks
     }, 1500);
@@ -661,31 +676,31 @@ const FormWithQuery: React.FC<FormWithQueryProps> = ({
     // Combine internal and external loading states
     const isLoading = isSubmitting || externalLoading;
     formMethods.setLoading(isLoading);
-    
+
     // Apply loading states to specific fields
     if (isLoading) {
       // Apply loading to specific fields based on internal state or external control
       const fieldsToLoad = isSubmitting
         ? ['phone', 'country', 'state'] // Default fields to show loading during submission
         : [];
-        
+
       // Apply loading to fields from internal state
-      fieldsToLoad.forEach(fieldId => {
+      fieldsToLoad.forEach((fieldId) => {
         formMethods.setFieldLoading(fieldId as keyof FormValues, true);
       });
-      
+
       // Apply any external loading states to specific fields
       Object.entries(loadingFields).forEach(([fieldId, isFieldLoading]) => {
         formMethods.setFieldLoading(fieldId as keyof FormValues, isFieldLoading);
       });
     } else {
       // Reset all field loading states
-      ['phone', 'country', 'state'].forEach(fieldId => {
+      ['phone', 'country', 'state'].forEach((fieldId) => {
         formMethods.setFieldLoading(fieldId as keyof FormValues, false);
       });
-      
+
       // Also reset any fields that might have been set from external loading
-      Object.keys(loadingFields).forEach(fieldId => {
+      Object.keys(loadingFields).forEach((fieldId) => {
         formMethods.setFieldLoading(fieldId as keyof FormValues, false);
       });
     }
@@ -693,7 +708,7 @@ const FormWithQuery: React.FC<FormWithQueryProps> = ({
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
-      <div className="max-w-4xl mx-auto">          
+      <div className="max-w-4xl mx-auto">
         <FormProvider formMethods={formMethods}>
           <ErrorBoundary
             fallback={
@@ -740,20 +755,20 @@ const StagedSubmissionDemo = () => {
   const [stagedLoading, setStagedLoading] = useState(false);
   const [currentStage, setCurrentStage] = useState(0);
   const [loadingFields, setLoadingFields] = useState<Record<string, boolean>>({});
-  
+
   // Define the stages of form submission
   const stages = [
     { name: 'Validating personal info', fields: ['phone', 'ssn'] },
     { name: 'Checking address', fields: ['country', 'state'] },
     { name: 'Verifying credentials', fields: ['password', 'confirmPassword'] },
-    { name: 'Processing skills', fields: ['skills'] }
+    { name: 'Processing skills', fields: ['skills'] },
   ];
-  
+
   const handleStagedSubmission = () => {
     // Start the staged submission process
     setStagedLoading(true);
     setCurrentStage(0);
-    
+
     // Process each stage with a delay
     const processStages = (stageIndex: number) => {
       if (stageIndex >= stages.length) {
@@ -763,37 +778,38 @@ const StagedSubmissionDemo = () => {
         setCurrentStage(0);
         return;
       }
-      
+
       // Set the current stage
       setCurrentStage(stageIndex);
-      
+
       // Set loading for the current stage's fields
       const stageFields = stages[stageIndex].fields;
       const newLoadingFields: Record<string, boolean> = {};
-      
-      stageFields.forEach(field => {
+
+      stageFields.forEach((field) => {
         newLoadingFields[field] = true;
       });
-      
+
       setLoadingFields(newLoadingFields);
-      
+
       // Process the next stage after a delay
       setTimeout(() => {
         processStages(stageIndex + 1);
       }, 1500);
     };
-    
+
     // Start processing stages
     processStages(0);
   };
-  
+
   return (
     <div className="mb-4 p-4 bg-green-50 rounded-lg">
       <h2 className="text-xl font-semibold mb-2">Staged Form Submission Demo</h2>
       <p className="mb-4 text-sm text-green-800">
-        This demo shows how to control loading states for different fields during a multi-stage form submission process.
+        This demo shows how to control loading states for different fields during a multi-stage form
+        submission process.
       </p>
-      
+
       {stagedLoading && (
         <div className="mb-4 p-3 bg-green-100 rounded">
           <p className="font-medium text-green-800">
@@ -807,19 +823,17 @@ const StagedSubmissionDemo = () => {
           </div>
         </div>
       )}
-      
+
       <button
         onClick={handleStagedSubmission}
         disabled={stagedLoading}
         className={`px-4 py-2 rounded text-white ${
-          stagedLoading
-            ? 'bg-gray-400 cursor-not-allowed'
-            : 'bg-green-600 hover:bg-green-700'
+          stagedLoading ? 'bg-gray-400 cursor-not-allowed' : 'bg-green-600 hover:bg-green-700'
         }`}
       >
         {stagedLoading ? 'Processing...' : 'Start Staged Submission'}
       </button>
-      
+
       {stagedLoading && (
         <div className="mt-3">
           <p className="text-sm text-green-800">
@@ -833,33 +847,27 @@ const StagedSubmissionDemo = () => {
 
 // Component to demonstrate the new features
 const FeatureDemonstration = () => {
-  const {
-    resetField,
-    watch,
-    setValue,
-    shouldDisplayField,
-    transformField,
-    getFieldDependencies
-  } = useFormContext();
-  
+  const { resetField, watch, setValue, shouldDisplayField, transformField, getFieldDependencies } =
+    useFormContext();
+
   const showAdvanced = watch('showAdvanced');
   const formattedNumber = watch('formattedNumber');
   const advancedField = watch('advancedField');
   const dynamicArrayField = watch('dynamicArrayField');
-  
+
   // Get dependencies for the advancedField
   const advancedFieldDeps = getFieldDependencies('advancedField');
-  
+
   // Check if advancedField should be displayed
   const isAdvancedFieldVisible = shouldDisplayField('advancedField');
-  
+
   // Transform a value manually
   const rawNumber = transformField('formattedNumber', formattedNumber, 'input');
-  
+
   return (
     <div className="mt-6 p-4 bg-white rounded-lg shadow">
       <h2 className="text-xl font-semibold mb-4">New Features Demonstration</h2>
-      
+
       <div className="space-y-6">
         {/* Field-Level Reset */}
         <div>
@@ -881,53 +889,72 @@ const FeatureDemonstration = () => {
             </button>
           </div>
         </div>
-        
+
         {/* Field Transformation */}
         <div>
           <h3 className="text-lg font-medium mb-2">Field Transformation:</h3>
           <div className="p-3 bg-gray-50 rounded">
-            <p><strong>Formatted Number Display Value:</strong> {formattedNumber}</p>
-            <p><strong>Raw Number Value (stored):</strong> {rawNumber}</p>
+            <p>
+              <strong>Formatted Number Display Value:</strong> {formattedNumber}
+            </p>
+            <p>
+              <strong>Raw Number Value (stored):</strong> {rawNumber}
+            </p>
           </div>
         </div>
-        
+
         {/* Conditional Fields */}
         <div>
           <h3 className="text-lg font-medium mb-2">Conditional Fields:</h3>
           <div className="p-3 bg-gray-50 rounded">
-            <p><strong>Show Advanced:</strong> {showAdvanced ? 'Yes' : 'No'}</p>
-            <p><strong>Advanced Field Visible:</strong> {isAdvancedFieldVisible ? 'Yes' : 'No'}</p>
+            <p>
+              <strong>Show Advanced:</strong> {showAdvanced ? 'Yes' : 'No'}
+            </p>
+            <p>
+              <strong>Advanced Field Visible:</strong> {isAdvancedFieldVisible ? 'Yes' : 'No'}
+            </p>
             {isAdvancedFieldVisible && (
-              <p><strong>Advanced Field Value:</strong> {advancedField || '(empty)'}</p>
+              <p>
+                <strong>Advanced Field Value:</strong> {advancedField || '(empty)'}
+              </p>
             )}
           </div>
         </div>
-        
+
         {/* Field Dependencies */}
         <div>
           <h3 className="text-lg font-medium mb-2">Field Dependencies:</h3>
           <div className="p-3 bg-gray-50 rounded">
-            <p><strong>Fields that depend on 'showAdvanced':</strong></p>
+            <p>
+              <strong>Fields that depend on 'showAdvanced':</strong>
+            </p>
             <ul className="list-disc pl-5">
-              {advancedFieldDeps.map(dep => (
+              {advancedFieldDeps.map((dep) => (
                 <li key={dep as string}>{dep as string}</li>
               ))}
             </ul>
           </div>
         </div>
-        
+
         {/* Dynamic Array Templates */}
         <div>
           <h3 className="text-lg font-medium mb-2">Dynamic Array Templates:</h3>
           <div className="p-3 bg-gray-50 rounded">
-            <p><strong>Dynamic Array Items:</strong></p>
+            <p>
+              <strong>Dynamic Array Items:</strong>
+            </p>
             <ul className="list-disc pl-5">
-              {Array.isArray(dynamicArrayField) && dynamicArrayField.map((item, index) => (
-                <li key={index}>
-                  Item {index + 1}: {item}
-                  {index === 0 && <span className="ml-2 text-xs text-gray-500">(First item must start with "Item")</span>}
-                </li>
-              ))}
+              {Array.isArray(dynamicArrayField) &&
+                dynamicArrayField.map((item, index) => (
+                  <li key={index}>
+                    Item {index + 1}: {item}
+                    {index === 0 && (
+                      <span className="ml-2 text-xs text-gray-500">
+                        (First item must start with "Item")
+                      </span>
+                    )}
+                  </li>
+                ))}
             </ul>
           </div>
         </div>
@@ -940,41 +967,42 @@ export default function App() {
   // Example of controlling loading state externally
   const [externalLoading, setExternalLoading] = useState(false);
   const [externalLoadingFields, setExternalLoadingFields] = useState<Record<string, boolean>>({});
-  
+
   // Example functions to demonstrate external loading control
   const handleExternalLoadingDemo = () => {
     // Set specific fields to loading
     setExternalLoadingFields({
-      'ssn': true,
-      'password': true
+      ssn: true,
+      password: true,
     });
-    
+
     // Simulate an external process
     setTimeout(() => {
       // Clear loading after 3 seconds
       setExternalLoadingFields({});
     }, 3000);
   };
-  
+
   const handleAllFieldsLoadingDemo = () => {
     // Set global loading state
     setExternalLoading(true);
-    
+
     // Simulate an external process
     setTimeout(() => {
       // Clear loading after 3 seconds
       setExternalLoading(false);
     }, 3000);
   };
-  
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <div className="mb-4 p-4 bg-blue-50 rounded-lg">
           <h2 className="text-xl font-semibold mb-2">External Loading Control Demo</h2>
           <p className="mb-4 text-sm text-blue-800">
-            These controls demonstrate how to control loading states from outside the form component.
-            This is useful when you need to show loading skeletons during form submission or when fetching data.
+            These controls demonstrate how to control loading states from outside the form
+            component. This is useful when you need to show loading skeletons during form submission
+            or when fetching data.
           </p>
           <div className="flex flex-wrap gap-3">
             <button
@@ -991,12 +1019,9 @@ export default function App() {
             </button>
           </div>
         </div>
-        
-        <FormWithQuery
-          externalLoading={externalLoading}
-          loadingFields={externalLoadingFields}
-        />
+
+        <FormWithQuery externalLoading={externalLoading} loadingFields={externalLoadingFields} />
       </QueryClientProvider>
     </ErrorBoundary>
   );
-};
+}

@@ -5,7 +5,7 @@ export const formConfig: FormConfig = {
     {
       id: 'row1',
       wrapperProps: {
-        className: 'mb-4'
+        className: 'mb-4',
       },
       columns: [
         {
@@ -17,8 +17,8 @@ export const formConfig: FormConfig = {
           required: true,
           validation: {
             pattern: '^\\(\\d{3}\\) \\d{3}-\\d{4}$',
-            message: 'Please enter a valid phone number'
-          }
+            message: 'Please enter a valid phone number',
+          },
         },
         {
           id: 'ssn',
@@ -29,15 +29,15 @@ export const formConfig: FormConfig = {
           required: true,
           validation: {
             pattern: '^\\d{3}-\\d{2}-\\d{4}$',
-            message: 'Please enter a valid SSN'
-          }
-        }
+            message: 'Please enter a valid SSN',
+          },
+        },
       ],
     },
     {
       id: 'row2',
       wrapperProps: {
-        className: 'mb-4'
+        className: 'mb-4',
       },
       columns: [
         {
@@ -53,8 +53,8 @@ export const formConfig: FormConfig = {
           validation: {
             custom: (value) => {
               return value === 'us' || 'Currently only accepting US applications';
-            }
-          }
+            },
+          },
         },
         {
           id: 'state',
@@ -71,15 +71,15 @@ export const formConfig: FormConfig = {
             custom: (value: string, formValues?: Record<string, any>) => {
               if (!formValues || formValues.country !== 'us') return true;
               return value ? true : 'State is required for US addresses';
-            }
-          }
-        }
+            },
+          },
+        },
       ],
     },
     {
       id: 'row3',
       wrapperProps: {
-        className: 'mb-4'
+        className: 'mb-4',
       },
       columns: [
         {
@@ -89,8 +89,8 @@ export const formConfig: FormConfig = {
           required: true,
           validation: {
             pattern: '^(?=.*[A-Za-z])(?=.*\\d)[A-Za-z\\d]{8,}$',
-            message: 'Password must be at least 8 characters with letters and numbers'
-          }
+            message: 'Password must be at least 8 characters with letters and numbers',
+          },
         },
         {
           id: 'confirmPassword',
@@ -102,15 +102,15 @@ export const formConfig: FormConfig = {
             custom: (value: string, formValues?: Record<string, any>) => {
               if (!formValues) return true;
               return value === formValues.password || 'Passwords must match';
-            }
-          }
-        }
-      ]
+            },
+          },
+        },
+      ],
     },
     {
       id: 'row4',
       wrapperProps: {
-        className: 'mb-4'
+        className: 'mb-4',
       },
       columns: [
         {
@@ -137,20 +137,20 @@ export const formConfig: FormConfig = {
             'Kubernetes',
             'AWS',
             'Azure',
-            'GCP'
+            'GCP',
           ],
           minItems: 2,
           maxItems: 5,
           validation: {
-            message: 'Please select between 2 and 5 skills'
-          }
-        }
-      ]
+            message: 'Please select between 2 and 5 skills',
+          },
+        },
+      ],
     },
     {
       id: 'row5',
       wrapperProps: {
-        className: 'mb-4'
+        className: 'mb-4',
       },
       columns: [
         {
@@ -166,16 +166,16 @@ export const formConfig: FormConfig = {
             placeholder: 'Enter email',
             validation: {
               pattern: '^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$',
-              message: 'Please enter a valid email'
-            }
-          }
-        }
-      ]
+              message: 'Please enter a valid email',
+            },
+          },
+        },
+      ],
     },
     {
       id: 'row6',
       wrapperProps: {
-        className: 'mb-4'
+        className: 'mb-4',
       },
       columns: [
         {
@@ -191,11 +191,11 @@ export const formConfig: FormConfig = {
             validation: {
               custom: (value) => {
                 return value.length >= 10 || 'Address must be at least 10 characters';
-              }
-            }
-          }
-        }
-      ]
-    }
+              },
+            },
+          },
+        },
+      ],
+    },
   ],
 };
