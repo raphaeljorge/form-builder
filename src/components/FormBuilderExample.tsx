@@ -82,6 +82,14 @@ const exampleFormConfig: FormConfig = {
           validation: {
             pattern: "^\\d{10}$", // Validate 10 digits
             message: "Phone number must be 10 digits",
+            // Custom validation function
+            custom: (value: string) => {
+              // Example: Check if the phone number starts with a specific area code
+              if (value?.startsWith("555")) {
+                return "Phone numbers starting with 555 are not allowed";
+              }
+              return true; // Valid
+            }
           },
         },
         {
@@ -122,6 +130,19 @@ const exampleFormConfig: FormConfig = {
           validation: {
             pattern: "^\\d{8}$", // Validate 8 digits
             message: "Date must be in MM/DD/YYYY format",
+            // Cross-field validation example
+            custom: (value: string, formValues: Record<string, any>) => {
+              // Example: If country is US, date must be in MM/DD/YYYY format
+              // If country is UK, date must be in DD/MM/YYYY format
+              if (value && formValues.country === "uk") {
+                // Extract month and day from MM/DD/YYYY format
+                const month = Number.parseInt(value.substring(0, 2), 10);
+                if (month > 12) {
+                  return "For UK, date must be in DD/MM/YYYY format";
+                }
+              }
+              return true; // Valid
+            }
           },
         },
       ],
