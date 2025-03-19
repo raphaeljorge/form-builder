@@ -2,14 +2,15 @@ import type React from "react";
 import { FormBuilder, useFormBuilder } from "./FormBuilder";
 import type { FormConfig, WrapperProps } from "../types/form";
 import { useMutation } from "@tanstack/react-query";
-import "./FormBuilderExample.css";
+import styles from "./FormBuilderExample.module.css";
+import { classNames } from "../utils/classNames";
 import { applyMask } from "../components/FormBuilder/fields/TextField";
 
 // Define custom wrapper components
 // Custom wrapper components
 const CustomRowWrapper: React.FC<WrapperProps> = ({ children, id }) => (
-  <div className="custom-form-row" style={{ marginBottom: '2rem', border: '1px solid #e5e7eb', padding: '1rem', borderRadius: '0.5rem' }}>
-    <div className="row-header" style={{ marginBottom: '0.5rem', fontWeight: 'bold' }}>
+  <div className={classNames("mb-8 border border-gray-200 p-4 rounded-lg")}>
+    <div className={classNames("mb-2 font-semibold text-gray-700")}>
       Row: {id}
     </div>
     {children}
@@ -17,21 +18,17 @@ const CustomRowWrapper: React.FC<WrapperProps> = ({ children, id }) => (
 );
 
 // biome-ignore lint/correctness/noUnusedVariables: Used in FormBuilder props
+// biome-ignore lint/correctness/noUnusedVariables: Used in FormBuilder props
 const CustomColumnWrapper = ({ children, id }: WrapperProps) => (
-  <div className="custom-form-column" style={{ padding: '0.5rem' }}>
+  <div className={classNames("p-2")}>
     {children}
   </div>
 );
 
 // Special wrapper for important fields
 const ImportantFieldWrapper: React.FC<WrapperProps> = ({ children, id }) => (
-  <div className="important-field-wrapper" style={{
-    padding: '1rem',
-    border: '2px solid #ef4444',
-    borderRadius: '0.5rem',
-    backgroundColor: '#fee2e2'
-  }}>
-    <div style={{ fontWeight: 'bold', color: '#b91c1c', marginBottom: '0.5rem' }}>
+  <div className={classNames("p-4 border-2 border-red-500 rounded-lg bg-red-100")}>
+    <div className={classNames("font-bold text-red-700 mb-2")}>
       Important Field: {id}
     </div>
     {children}
@@ -40,13 +37,9 @@ const ImportantFieldWrapper: React.FC<WrapperProps> = ({ children, id }) => (
 
 // Side by side wrapper for displaying fields in a row
 // biome-ignore lint/correctness/noUnusedVariables: Used in form config
+// biome-ignore lint/correctness/noUnusedVariables: Used in form config
 const SideBySideWrapper: React.FC<WrapperProps> = ({ children, id }) => (
-  <div className="side-by-side-wrapper" style={{
-    display: 'flex',
-    flexDirection: 'row',
-    gap: '1rem',
-    width: '100%'
-  }}>
+  <div className={classNames(styles.sideBySideWrapper, "flex flex-row gap-4 w-full md:flex-row sm:flex-col")}>
     {children}
   </div>
 );
@@ -256,8 +249,8 @@ const FormBuilderExample: React.FC = () => {
 
 
   return (
-    <div className="form-example">
-      <h1>Form Builder Example</h1>
+    <div className={classNames(styles.formExample, "max-w-4xl mx-auto p-8")}>
+      <h1 className={classNames(styles.formTitle, "text-2xl font-bold mb-8 text-gray-800")}>Form Builder Example</h1>
       
       {/* Form Builder Component */}
       <FormBuilder
@@ -268,12 +261,17 @@ const FormBuilderExample: React.FC = () => {
       />
       
       {/* Form Actions - Now outside the FormBuilder component */}
-      <div className="form-actions">
+      <div className={classNames(styles.formActions, "flex gap-4 mt-8 justify-end")}>
         <button
           type="button"
           onClick={resetForm}
           disabled={mutation.isPending}
-          className="reset-button"
+          className={classNames(
+            styles.resetButton,
+            "px-4 py-2 bg-gray-100 text-gray-600 border border-gray-300 rounded-md text-sm font-medium",
+            mutation.isPending && styles.disabled,
+            mutation.isPending && "opacity-50 cursor-not-allowed"
+          )}
         >
           Reset Form
         </button>
@@ -282,34 +280,39 @@ const FormBuilderExample: React.FC = () => {
           type="button"
           onClick={handleSubmit(onSubmit)}
           disabled={!formState.isValid || mutation.isPending}
-          className="submit-button"
+          className={classNames(
+            styles.submitButton,
+            "px-4 py-2 bg-blue-500 text-white border-none rounded-md text-sm font-medium",
+            (!formState.isValid || mutation.isPending) && styles.disabled,
+            (!formState.isValid || mutation.isPending) && "opacity-50 cursor-not-allowed"
+          )}
         >
           {mutation.isPending ? "Submitting..." : "Submit Form"}
         </button>
       </div>
       
-      <div className="form-debug">
-        <h2>Form State</h2>
-        <div style={{ display: 'flex', gap: '2rem' }}>
-          <div style={{ flex: 1 }}>
-            <h3>Raw Values</h3>
-            <pre>{JSON.stringify(state.raw, null, 2)}</pre>
+      <div className={classNames(styles.formDebug, "mt-12 p-6 border border-gray-200 rounded-lg bg-gray-50")}>
+        <h2 className={classNames(styles.debugTitle, "text-xl font-semibold mb-4 text-gray-800")}>Form State</h2>
+        <div className={classNames("flex gap-8 flex-col md:flex-row")}>
+          <div className={classNames("flex-1")}>
+            <h3 className={classNames(styles.debugSubtitle, "text-lg font-semibold mb-2 text-gray-700")}>Raw Values</h3>
+            <pre className={classNames(styles.debugPre, "bg-gray-100 p-4 rounded-md overflow-x-auto")}>{JSON.stringify(state.raw, null, 2)}</pre>
           </div>
-          <div style={{ flex: 1 }}>
-            <h3>Masked Values</h3>
-            <pre>{JSON.stringify(state.masked, null, 2)}</pre>
+          <div className={classNames("flex-1")}>
+            <h3 className={classNames(styles.debugSubtitle, "text-lg font-semibold mb-2 text-gray-700")}>Masked Values</h3>
+            <pre className={classNames(styles.debugPre, "bg-gray-100 p-4 rounded-md overflow-x-auto")}>{JSON.stringify(state.masked, null, 2)}</pre>
           </div>
         </div>
         
-        <h2>Submission State</h2>
-        <p>Status: {mutation.isPending ? "Submitting..." : mutation.isSuccess ? "Success" : "Idle"}</p>
+        <h2 className={classNames(styles.debugTitle, "text-xl font-semibold mb-4 mt-8 text-gray-800")}>Submission State</h2>
+        <p className={classNames("text-sm mb-4")}>Status: {mutation.isPending ? "Submitting..." : mutation.isSuccess ? "Success" : "Idle"}</p>
         
-        <h2>Form Validity</h2>
-        <p>Is Valid: {formState.isValid ? "Yes" : "No"}</p>
-        <p>Is Dirty: {formState.isDirty ? "Yes" : "No"}</p>
+        <h2 className={classNames(styles.debugTitle, "text-xl font-semibold mb-4 mt-8 text-gray-800")}>Form Validity</h2>
+        <p className={classNames("text-sm mb-2")}>Is Valid: {formState.isValid ? "Yes" : "No"}</p>
+        <p className={classNames("text-sm mb-4")}>Is Dirty: {formState.isDirty ? "Yes" : "No"}</p>
         
-        <h2>Form Errors</h2>
-        <pre>{JSON.stringify(formState.errors, null, 2)}</pre>
+        <h2 className={classNames(styles.debugTitle, "text-xl font-semibold mb-4 mt-8 text-gray-800")}>Form Errors</h2>
+        <pre className={classNames(styles.debugPre, "bg-gray-100 p-4 rounded-md overflow-x-auto")}>{JSON.stringify(formState.errors, null, 2)}</pre>
       </div>
     </div>
   );

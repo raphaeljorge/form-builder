@@ -10,7 +10,7 @@ import type {
   ValidationRule,
   TextColumnConfig,
 } from "../types/form";
-import { applyMask } from "../components/FormBuilder/fields/TextField";
+import { applyMask } from "../components/FormBuilder/fields/TextField/TextField";
 
 /**
  * Extract all field configurations from the form config

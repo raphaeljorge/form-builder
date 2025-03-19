@@ -1,6 +1,7 @@
 import type React from "react";
 import type { FormBuilderProps, WrapperProps } from "../../types/form";
-import "./FormBuilder.css";
+import styles from "./FormBuilder.module.css";
+import { classNames } from "../../utils/classNames";
 import { useFormBuilder } from "../../hooks/useFormBuilder";
 
 // Field components
@@ -12,13 +13,13 @@ import { TextField, SelectField, ChipField, ArrayField } from "./fields";
  */
 // Default wrapper components
 const DefaultRowWrapper: React.FC<WrapperProps> = ({ children, id }) => (
-  <div key={id} className="form-row">
+  <div key={id} className={classNames(styles.formRow, "flex flex-wrap mb-6 gap-4 w-full")}>
     {children}
   </div>
 );
 
 const DefaultColumnWrapper: React.FC<WrapperProps> = ({ children, id }) => (
-  <div key={id} className="form-column">
+  <div key={id} className={classNames(styles.formColumn, "flex-1 min-w-[250px] w-full")}>
     {children}
   </div>
 );
@@ -57,7 +58,7 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
   };
 
   return (
-    <form className="form-builder">
+    <form className={classNames(styles.formBuilder, "w-full max-w-full font-sans")}>
       {/* Render rows */}
       {config.rows.map((row) => {
         const CurrentRowWrapper = getRowWrapper(row);

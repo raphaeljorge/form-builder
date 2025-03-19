@@ -1,0 +1,92 @@
+/* FormBuilderExample Module Styles */
+
+.formExample {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.formTitle {
+  margin-bottom: 2rem;
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+
+.formActions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.resetButton {
+  padding: 0.5rem 1rem;
+  background-color: #f3f4f6;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.resetButton:hover {
+  background-color: #e5e7eb;
+}
+
+.submitButton {
+  padding: 0.5rem 1rem;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.submitButton:hover {
+  background-color: #2563eb;
+}
+
+.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.formDebug {
+  margin-top: 3rem;
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+}
+
+.debugTitle {
+  margin-bottom: 1rem;
+  font-size: 1.25rem;
+  font-weight: bold;
+}
+
+.debugSubtitle {
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+  font-weight: bold;
+}
+
+.debugPre {
+  background-color: #f3f4f6;
+  padding: 1rem;
+  border-radius: 0.375rem;
+  overflow-x: auto;
+}
+
+/* Side by side wrapper styles */
+.sideBySideWrapper {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  width: 100%;
+}
+
+/* Make the side by side wrapper responsive */
+@media (max-width: 768px) {
+  .sideBySideWrapper {
+    flex-direction: column;
+  }
+}

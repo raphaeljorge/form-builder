@@ -1,0 +1,159 @@
+/* ArrayField Module Styles */
+
+.formField {
+  margin-bottom: 1rem;
+}
+
+.arrayField {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+  padding: 1rem;
+  background-color: #f9fafb;
+}
+
+.arrayFieldHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.arrayAddButton {
+  padding: 0.375rem 0.75rem;
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.arrayAddButton:hover {
+  background-color: #2563eb;
+}
+
+.arrayAddButton:disabled {
+  background-color: #93c5fd;
+  cursor: not-allowed;
+}
+
+.arrayEmptyMessage {
+  text-align: center;
+  padding: 1rem;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.arrayItems {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.arrayItem {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1rem;
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+}
+
+.arrayItemContent {
+  flex: 1;
+}
+
+.arrayRemoveButton {
+  padding: 0.375rem 0.75rem;
+  background-color: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  margin-top: 1.5rem;
+}
+
+.arrayRemoveButton:hover {
+  background-color: #dc2626;
+}
+
+.arrayRemoveButton:disabled {
+  background-color: #fca5a5;
+  cursor: not-allowed;
+}
+
+.formError {
+  color: #ef4444;
+  font-size: 0.75rem;
+  margin-top: 0.5rem;
+  font-weight: 500;
+}
+
+/* Skeleton Loading Styles */
+.formSkeleton {
+  width: 100%;
+  padding: 0.5rem 0;
+}
+
+.skeletonArrayItems {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.skeletonArrayItem {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem;
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.375rem;
+}
+
+.skeletonInput {
+  width: 100%;
+  height: 38px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 0.25rem;
+  animation: skeletonLoading 1.5s infinite;
+}
+
+.skeletonButton {
+  width: 80px;
+  height: 38px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 0.25rem;
+  animation: skeletonLoading 1.5s infinite;
+  flex-shrink: 0;
+}
+
+@keyframes skeletonLoading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.loading .formLabel {
+  opacity: 0.7;
+}
+
+/* Loading State */
+.loading .arrayAddButton,
+.loading .arrayRemoveButton {
+  background-color: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}

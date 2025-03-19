@@ -1,58 +1,52 @@
-/* FormBuilder Styles */
+/* FormBuilder Module Styles */
 
 /* Form Container */
-.form-builder {
+.formBuilder {
   width: 100%;
   max-width: 100%;
   font-family: sans-serif;
 }
 
 /* Row Styles */
-.form-row {
-  display: flex;
-  flex-wrap: wrap;
-  margin-bottom: 1.5rem;
-  gap: 1rem;
-  width: 100%;
+.formRow {
+  /* Basic styles only, Tailwind classes will be applied directly in JSX */
 }
 
 /* Column Styles */
-.form-column {
-  flex: 1;
-  min-width: 250px;
-  width: 100%;
+.formColumn {
+  /* Basic styles only, Tailwind classes will be applied directly in JSX */
 }
 
 /* Field Styles */
-.form-field {
+.formField {
   margin-bottom: 1rem;
 }
 
-.form-label {
+.formLabel {
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 500;
   color: #333;
 }
 
-.form-label-container {
+.formLabelContainer {
   margin-bottom: 0.5rem;
 }
 
-.required-mark {
+.requiredMark {
   color: #e53e3e;
   margin-left: 0.25rem;
 }
 
-.form-hint {
+.formHint {
   font-size: 0.875rem;
   color: #666;
   margin-left: 0.5rem;
   font-weight: normal;
 }
 
-.form-input,
-.form-select {
+.formInput,
+.formSelect {
   width: 100%;
   padding: 0.5rem;
   border: 1px solid #d1d5db;
@@ -61,32 +55,32 @@
   transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
-.form-input:focus,
-.form-select:focus {
+.formInput:focus,
+.formSelect:focus {
   outline: none;
   border-color: #3b82f6;
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
 }
 
-.form-input-error,
-.form-select-error {
+.formInputError,
+.formSelectError {
   border-color: #e53e3e;
 }
 
-.form-input-error:focus,
-.form-select-error:focus {
+.formInputError:focus,
+.formSelectError:focus {
   border-color: #e53e3e;
   box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.25);
 }
 
-.form-error {
+.formError {
   color: #e53e3e;
   font-size: 0.875rem;
   margin-top: 0.25rem;
 }
 
 /* Chip Field Styles */
-.chip-container {
+.chipContainer {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
@@ -109,7 +103,7 @@
   background-color: #e5e7eb;
 }
 
-.chip-selected {
+.chipSelected {
   background-color: #3b82f6;
   color: white;
   border-color: #3b82f6;
@@ -119,12 +113,12 @@
 }
 
 /* Chip autocomplete styles */
-.chip-autocomplete {
+.chipAutocomplete {
   position: relative;
   width: 100%;
 }
 
-.chip-dropdown {
+.chipDropdown {
   position: absolute;
   top: 100%;
   left: 0;
@@ -139,7 +133,7 @@
   margin-top: 0.25rem;
 }
 
-.chip-option {
+.chipOption {
   padding: 0.5rem 1rem;
   cursor: pointer;
   transition: background-color 0.2s ease;
@@ -149,15 +143,15 @@
   background: none;
 }
 
-.chip-option:hover {
+.chipOption:hover {
   background-color: #f3f4f6;
 }
 
-.chip-label {
+.chipLabel {
   margin-right: 0.25rem;
 }
 
-.chip-remove {
+.chipRemove {
   background: none;
   border: none;
   color: inherit;
@@ -169,60 +163,60 @@
   transition: opacity 0.2s ease;
 }
 
-.chip-remove:hover {
+.chipRemove:hover {
   opacity: 1;
 }
 
-.chip-selected:hover {
+.chipSelected:hover {
   background-color: #2563eb;
 }
 
-.chip-disabled {
+.chipDisabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
 /* Skeleton Loading Styles */
-.form-skeleton {
+.formSkeleton {
   width: 100%;
   padding: 0.5rem 0;
 }
 
-.skeleton-input {
+.skeletonInput {
   width: 100%;
   height: 38px;
   background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
   background-size: 200% 100%;
   border-radius: 0.25rem;
-  animation: skeleton-loading 1.5s infinite;
+  animation: skeletonLoading 1.5s infinite;
 }
 
 /* Skeleton styles for chip field */
-.skeleton-chips {
+.skeletonChips {
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.5rem;
 }
 
-.skeleton-chip {
+.skeletonChip {
   width: 100px;
   height: 32px;
   background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
   background-size: 200% 100%;
   border-radius: 9999px;
-  animation: skeleton-loading 1.5s infinite;
+  animation: skeletonLoading 1.5s infinite;
 }
 
 /* Skeleton styles for array field */
-.skeleton-array-items {
+.skeletonArrayItems {
   display: flex;
   flex-direction: column;
   gap: 1rem;
   margin-top: 1rem;
 }
 
-.skeleton-array-item {
+.skeletonArrayItem {
   display: flex;
   gap: 1rem;
   align-items: center;
@@ -232,17 +226,17 @@
   border-radius: 0.375rem;
 }
 
-.skeleton-button {
+.skeletonButton {
   width: 80px;
   height: 38px;
   background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
   background-size: 200% 100%;
   border-radius: 0.25rem;
-  animation: skeleton-loading 1.5s infinite;
+  animation: skeletonLoading 1.5s infinite;
   flex-shrink: 0;
 }
 
-@keyframes skeleton-loading {
+@keyframes skeletonLoading {
   0% {
     background-position: 200% 0;
   }
@@ -251,26 +245,26 @@
   }
 }
 
-.form-field.loading .form-label {
+.loading .formLabel {
   opacity: 0.7;
 }
 
 /* Array Field Styles */
-.array-field {
+.arrayField {
   border: 1px solid #e5e7eb;
   border-radius: 0.375rem;
   padding: 1rem;
   background-color: #f9fafb;
 }
 
-.array-field-header {
+.arrayFieldHeader {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
 }
 
-.array-add-button {
+.arrayAddButton {
   padding: 0.375rem 0.75rem;
   background-color: #3b82f6;
   color: white;
@@ -281,29 +275,29 @@
   transition: background-color 0.2s ease;
 }
 
-.array-add-button:hover {
+.arrayAddButton:hover {
   background-color: #2563eb;
 }
 
-.array-add-button:disabled {
+.arrayAddButton:disabled {
   background-color: #93c5fd;
   cursor: not-allowed;
 }
 
-.array-empty-message {
+.arrayEmptyMessage {
   text-align: center;
   padding: 1rem;
   color: #6b7280;
   font-style: italic;
 }
 
-.array-items {
+.arrayItems {
   display: flex;
   flex-direction: column;
   gap: 1rem;
 }
 
-.array-item {
+.arrayItem {
   display: flex;
   gap: 1rem;
   align-items: flex-start;
@@ -313,11 +307,11 @@
   border-radius: 0.375rem;
 }
 
-.array-item-content {
+.arrayItemContent {
   flex: 1;
 }
 
-.array-remove-button {
+.arrayRemoveButton {
   padding: 0.375rem 0.75rem;
   background-color: #ef4444;
   color: white;
@@ -329,19 +323,19 @@
   margin-top: 1.5rem;
 }
 
-.array-remove-button:hover {
+.arrayRemoveButton:hover {
   background-color: #dc2626;
 }
 
-.array-remove-button:disabled {
+.arrayRemoveButton:disabled {
   background-color: #fca5a5;
   cursor: not-allowed;
 }
 
 /* Loading State */
-.form-field.loading .form-input,
-.form-field.loading .form-select,
-.form-field.loading .chip {
+.loading .formInput,
+.loading .formSelect,
+.loading .chip {
   background-color: #f3f4f6;
   color: #9ca3af;
   cursor: not-allowed;

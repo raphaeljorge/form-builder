@@ -1,0 +1,68 @@
+/* TextField Module Styles */
+
+.formField {
+  margin-bottom: 1rem;
+}
+
+.formInput {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.375rem;
+  font-size: 1rem;
+  line-height: 1.5;
+  color: #374151;
+  background-color: #fff;
+  background-clip: padding-box;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.formInput:focus {
+  outline: none;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
+.formInputError {
+  border-color: #e53e3e;
+}
+
+.formInputError:focus {
+  border-color: #e53e3e;
+  box-shadow: 0 0 0 3px rgba(229, 62, 62, 0.25);
+}
+
+/* Skeleton Loading Styles */
+.formSkeleton {
+  width: 100%;
+  padding: 0.5rem 0;
+}
+
+.skeletonInput {
+  width: 100%;
+  height: 38px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  border-radius: 0.25rem;
+  animation: skeletonLoading 1.5s infinite;
+}
+
+@keyframes skeletonLoading {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.loading .formLabel {
+  opacity: 0.7;
+}
+
+/* Loading State */
+.loading .formInput {
+  background-color: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}

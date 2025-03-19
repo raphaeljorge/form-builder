@@ -1,10 +1,10 @@
 import type React from "react";
 import { useRef, useEffect, useState } from "react";
-import type { TextFieldProps } from "./types";
+import type { TextFieldProps } from "../types";
+import styles from "./TextField.module.css";
+import { classNames } from "../../../../utils/classNames";
+import { FormFieldContainer } from "../../common";
 
-/**
- * Text field component using uncontrolled input with ref
- */
 /**
  * Count the number of value placeholders in a mask
  */
@@ -122,36 +122,50 @@ const TextField: React.FC<TextFieldProps> = ({
     }
   };
 
-  return (
-    <div className={`form-field ${isLoading ? "loading" : ""}`}>
-      {field.label && (
-        <label htmlFor={field.id} className="form-label">
-          {field.label}
-          {field.required && <span className="required-mark">*</span>}
-        </label>
-      )}
-      
-      {isLoading ? (
-        // Skeleton loading state
-        <div className="form-skeleton">
-          <div className="skeleton-input" />
-        </div>
-      ) : (
-        // Normal input
-        <input
-          ref={inputRef}
-          id={field.id}
-          type="text"
-          className={`form-input ${error ? "form-input-error" : ""}`}
-          value={displayValue}
-          onChange={handleChange}
-          placeholder={field.placeholder}
-          disabled={isLoading}
-        />
-      )}
-      
-      {error && !isLoading && <div className="form-error">{error}</div>}
+  // Skeleton loading state for the field
+  const loadingContent = (
+    <div className={classNames(
+      styles.formSkeleton,
+      "w-full py-2"
+    )}>
+      <div className={classNames(
+        styles.skeletonInput,
+        "w-full h-[38px] bg-gradient-to-r from-gray-100 via-gray-200 to-gray-100 bg-[length:200%_100%] rounded animate-pulse"
+      )} />
     </div>
+  );
+
+  // Normal input content
+  const fieldContent = (
+    <input
+      ref={inputRef}
+      id={field.id}
+      type="text"
+      className={classNames(
+        styles.formInput,
+        error && styles.formInputError,
+        "w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+        error && "border-red-500 focus:ring-red-500 focus:border-red-500"
+      )}
+      value={displayValue}
+      onChange={handleChange}
+      placeholder={field.placeholder}
+      disabled={isLoading}
+    />
+  );
+
+  return (
+    <FormFieldContainer
+      id={field.id}
+      label={field.label}
+      required={field.required}
+      error={error}
+      isLoading={isLoading}
+      loadingContent={loadingContent}
+      className={classNames(styles.formField, isLoading && styles.loading)}
+    >
+      {fieldContent}
+    </FormFieldContainer>
   );
 };
 
