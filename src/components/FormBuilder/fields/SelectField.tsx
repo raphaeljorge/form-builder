@@ -36,7 +36,7 @@ const SelectField: React.FC<SelectFieldProps> = ({
   });
 
   return (
-    <div className="form-field">
+    <div className={`form-field ${isLoading ? "loading" : ""}`}>
       {field.label && (
         <label htmlFor={field.id} className="form-label">
           {field.label}
@@ -44,34 +44,42 @@ const SelectField: React.FC<SelectFieldProps> = ({
         </label>
       )}
       
-      <select
-        ref={selectRef}
-        id={field.id}
-        className={`form-select ${error ? "form-select-error" : ""}`}
-        defaultValue={value || ""}
-        onChange={handleChange}
-        disabled={isLoading}
-      >
-        <option value="">{field.placeholder || "Select an option"}</option>
-        
-        {normalizedOptions.map((option: FieldOption) => {
-          if (typeof option === "string") {
+      {isLoading ? (
+        // Skeleton loading state
+        <div className="form-skeleton">
+          <div className="skeleton-input" />
+        </div>
+      ) : (
+        // Normal select
+        <select
+          ref={selectRef}
+          id={field.id}
+          className={`form-select ${error ? "form-select-error" : ""}`}
+          defaultValue={value || ""}
+          onChange={handleChange}
+          disabled={isLoading}
+        >
+          <option value="">{field.placeholder || "Select an option"}</option>
+          
+          {normalizedOptions.map((option: FieldOption) => {
+            if (typeof option === "string") {
+              return (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              );
+            }
+            
             return (
-              <option key={option} value={option}>
-                {option}
+              <option key={option.value} value={option.value}>
+                {option.label}
               </option>
             );
-          }
-          
-          return (
-            <option key={option.value} value={option.value}>
-              {option.label}
-            </option>
-          );
-        })}
-      </select>
+          })}
+        </select>
+      )}
       
-      {error && <div className="form-error">{error}</div>}
+      {error && !isLoading && <div className="form-error">{error}</div>}
     </div>
   );
 };

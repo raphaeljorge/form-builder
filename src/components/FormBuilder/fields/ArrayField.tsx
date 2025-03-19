@@ -64,7 +64,7 @@ const ArrayField: React.FC<ArrayFieldProps> = ({
   };
 
   return (
-    <div className="form-field array-field">
+    <div className={`form-field array-field ${isLoading ? "loading" : ""}`}>
       <div className="array-field-header">
         <div className="form-label-container">
           <span id={`${field.id}-label`} className="form-label">
@@ -94,48 +94,68 @@ const ArrayField: React.FC<ArrayFieldProps> = ({
         </button>
       </div>
       
-      {items.length === 0 && (
-        <div className="array-empty-message">
-          No items added yet. Click "Add" to add an item.
-        </div>
-      )}
-      
-      {items.length > 0 && (
-        <div className="array-items">
-          {items.map((item, index) => (
-            <div key={`${field.id}-item-${index}`} className="array-item">
-              <div className="array-item-content">
-                {field.template.type === "text" && (
-                  <TextField
-                    field={{
-                      ...field.template,
-                      id: `${field.id}-${index}`,
-                      label: `Item ${index + 1}`,
-                      type: "text",
-                    } as any}
-                    value={item}
-                    onChange={(value) => updateItem(index, value)}
-                    isLoading={isLoading}
-                  />
-                )}
-                {/* Add support for other field types as needed */}
-              </div>
-              
-              <button
-                type="button"
-                className="array-remove-button"
-                onClick={() => removeItem(index)}
-                disabled={isLoading || (field.minItems ? items.length <= field.minItems : false)}
-                aria-label={`Remove item ${index + 1}`}
-              >
-                Remove
-              </button>
+      {isLoading ? (
+        // Skeleton loading state
+        <div className="form-skeleton">
+          <div className="skeleton-array-items">
+            <div className="skeleton-array-item">
+              <div className="skeleton-input" />
+              <div className="skeleton-button" />
             </div>
-          ))}
+            {items.length > 1 && (
+              <div className="skeleton-array-item">
+                <div className="skeleton-input" />
+                <div className="skeleton-button" />
+              </div>
+            )}
+          </div>
         </div>
+      ) : (
+        <>
+          {items.length === 0 && (
+            <div className="array-empty-message">
+              No items added yet. Click "Add" to add an item.
+            </div>
+          )}
+          
+          {items.length > 0 && (
+            <div className="array-items">
+              {items.map((item, index) => (
+                <div key={`${field.id}-item-${index}`} className="array-item">
+                  <div className="array-item-content">
+                    {field.template.type === "text" && (
+                      <TextField
+                        field={{
+                          ...field.template,
+                          id: `${field.id}-${index}`,
+                          label: `Item ${index + 1}`,
+                          type: "text",
+                        } as any}
+                        value={item}
+                        onChange={(value) => updateItem(index, value)}
+                        isLoading={isLoading}
+                      />
+                    )}
+                    {/* Add support for other field types as needed */}
+                  </div>
+                  
+                  <button
+                    type="button"
+                    className="array-remove-button"
+                    onClick={() => removeItem(index)}
+                    disabled={isLoading || (field.minItems ? items.length <= field.minItems : false)}
+                    aria-label={`Remove item ${index + 1}`}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
       )}
       
-      {error && <div className="form-error">{error}</div>}
+      {error && !isLoading && <div className="form-error">{error}</div>}
     </div>
   );
 };

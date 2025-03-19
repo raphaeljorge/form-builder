@@ -22,6 +22,8 @@ export interface ValidationRule {
 export interface BaseColumnConfig {
   id: string;
   type: "text" | "select" | "chip" | "array";
+  wrapperProps?: Record<string, any>;
+  wrapper?: React.ComponentType<WrapperProps>; // Direct reference to a wrapper component
   label?: string;
   placeholder?: string;
   required?: boolean;
@@ -80,6 +82,8 @@ export type ColumnConfig =
 export interface RowConfig {
   id: string;
   columns: ColumnConfig[];
+  wrapperProps?: Record<string, any>;
+  wrapper?: React.ComponentType<WrapperProps>; // Direct reference to a wrapper component
 }
 
 /**
@@ -136,6 +140,15 @@ export interface FormBuilderReturn {
 }
 
 /**
+ * Custom wrapper component props
+ */
+export interface WrapperProps {
+  children: ReactNode;
+  id: string;
+  [key: string]: any;
+}
+
+/**
  * Form builder component props
  */
 export interface FormBuilderProps {
@@ -143,4 +156,6 @@ export interface FormBuilderProps {
   isLoading?: boolean;
   children?: ReactNode;
   form?: FormBuilderReturn;
+  RowWrapper?: React.ComponentType<WrapperProps>;
+  ColumnWrapper?: React.ComponentType<WrapperProps>;
 }
