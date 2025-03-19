@@ -26,7 +26,6 @@ const DefaultColumnWrapper: React.FC<WrapperProps> = ({ children, id }) => (
 export const FormBuilder: React.FC<FormBuilderProps> = ({
   config,
   isLoading = false,
-  children,
   form: externalForm, // Rename to avoid confusion
   RowWrapper = DefaultRowWrapper,
   ColumnWrapper = DefaultColumnWrapper,
@@ -124,9 +123,6 @@ export const FormBuilder: React.FC<FormBuilderProps> = ({
           </CurrentRowWrapper>
         );
       })}
-
-      {/* Render children (action buttons, etc.) */}
-      {children}
     </form>
   );
 };

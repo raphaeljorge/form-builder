@@ -155,7 +155,6 @@ export interface WrapperProps {
 export interface FormBuilderProps {
   config: FormConfig;
   isLoading?: boolean;
-  children?: ReactNode;
   form?: FormBuilderReturn;
   RowWrapper?: React.ComponentType<WrapperProps>;
   ColumnWrapper?: React.ComponentType<WrapperProps>;

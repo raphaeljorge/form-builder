@@ -259,32 +259,34 @@ const FormBuilderExample: React.FC = () => {
     <div className="form-example">
       <h1>Form Builder Example</h1>
       
+      {/* Form Builder Component */}
       <FormBuilder
         config={exampleFormConfig}
         isLoading={mutation.isPending}
         form={form}
         RowWrapper={CustomRowWrapper}
-      >
-        <div className="form-actions">
-          <button
-            type="button"
-            onClick={resetForm}
-            disabled={mutation.isPending}
-            className="reset-button"
-          >
-            Reset Form
-          </button>
-          
-          <button
-            type="button"
-            onClick={handleSubmit(onSubmit)}
-            disabled={!formState.isValid || mutation.isPending}
-            className="submit-button"
-          >
-            {mutation.isPending ? "Submitting..." : "Submit Form"}
-          </button>
-        </div>
-      </FormBuilder>
+      />
+      
+      {/* Form Actions - Now outside the FormBuilder component */}
+      <div className="form-actions">
+        <button
+          type="button"
+          onClick={resetForm}
+          disabled={mutation.isPending}
+          className="reset-button"
+        >
+          Reset Form
+        </button>
+        
+        <button
+          type="button"
+          onClick={handleSubmit(onSubmit)}
+          disabled={!formState.isValid || mutation.isPending}
+          className="submit-button"
+        >
+          {mutation.isPending ? "Submitting..." : "Submit Form"}
+        </button>
+      </div>
       
       <div className="form-debug">
         <h2>Form State</h2>
