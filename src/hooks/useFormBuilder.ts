@@ -237,6 +237,16 @@ export const useFormBuilder = (
             shouldValidate: true,
           });
         },
+        // Add update method for updating a specific item in the array
+        update: (index: number, value: any) => {
+          const currentValues = getValues(fieldConfig.id) || [];
+          const newValues = [...currentValues];
+          newValues[index] = value;
+          setValue(fieldConfig.id, newValues, {
+            shouldDirty: true,
+            shouldValidate: true,
+          });
+        },
       };
     }
 

@@ -34,10 +34,9 @@ const ArrayField: React.FC<ArrayFieldProps> = ({
       return;
     }
     
-    // Add a new empty item
-    const newItems = [...items, ""];
-    setItems(newItems);
-    onChange(newItems);
+    // Use arrayOperations to add a new item
+    // This will update the form state, which will trigger the useEffect
+    // that updates the local state
     arrayOperations.add("");
   };
 
@@ -50,9 +49,9 @@ const ArrayField: React.FC<ArrayFieldProps> = ({
       return;
     }
     
-    const newItems = items.filter((_, i) => i !== index);
-    setItems(newItems);
-    onChange(newItems);
+    // Use arrayOperations to remove an item
+    // This will update the form state, which will trigger the useEffect
+    // that updates the local state
     arrayOperations.remove(index);
   };
 
@@ -60,10 +59,18 @@ const ArrayField: React.FC<ArrayFieldProps> = ({
   const updateItem = (index: number, itemValue: string) => {
     if (isLoading) return;
     
-    const newItems = [...items];
-    newItems[index] = itemValue;
-    setItems(newItems);
-    onChange(newItems);
+    if (arrayOperations.update) {
+      // Use arrayOperations.update if available
+      arrayOperations.update(index, itemValue);
+    } else {
+      // Fall back to direct update if update method is not available
+      const newItems = [...items];
+      newItems[index] = itemValue;
+      
+      // Update local state and notify parent
+      setItems(newItems);
+      onChange(newItems);
+    }
   };
 
   // Custom header with label and add button

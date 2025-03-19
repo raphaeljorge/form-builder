@@ -136,6 +136,7 @@ export interface FormBuilderReturn {
       add: (value: any) => void;
       remove: (index: number) => void;
       move: (from: number, to: number) => void;
+      update: (index: number, value: any) => void;
     };
   };
 }
