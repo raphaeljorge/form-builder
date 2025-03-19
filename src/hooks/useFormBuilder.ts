@@ -8,7 +8,9 @@ import type {
   ArrayColumnConfig,
   ColumnConfig,
   ValidationRule,
+  TextColumnConfig,
 } from "../types/form";
+import { applyMask } from "../components/FormBuilder/fields/TextField";
 
 /**
  * Extract all field configurations from the form config
@@ -271,10 +273,31 @@ export const useFormBuilder = (
     reset(defaultValues);
   };
 
+  // Generate masked values for fields with masks
+  const getMaskedValues = () => {
+    const values = getValues();
+    const maskedValues: Record<string, any> = { ...values };
+    
+    // Apply masks to fields that have them
+    for (const [fieldId, fieldConfig] of Object.entries(fields)) {
+      if (fieldConfig.type === "text" && (fieldConfig as TextColumnConfig).mask) {
+        const mask = (fieldConfig as TextColumnConfig).mask;
+        const rawValue = values[fieldId];
+        
+        if (mask && rawValue) {
+          maskedValues[fieldId] = applyMask(rawValue, mask);
+        }
+      }
+    }
+    
+    return maskedValues;
+  };
+
   // Return unified API
   return {
     state: {
       raw: getValues(),
+      masked: getMaskedValues(),
     },
     formState: {
       raw: getValues(),
@@ -304,6 +327,9 @@ export const useFormBuilder = (
         shouldTouch: true,
         shouldValidate: true
       });
+      
+      // Update the masked values when a field value changes
+      // This is handled automatically by getMaskedValues() when state.masked is accessed
     },
     getValue: (name: string) => getValues(name),
     resetForm,

@@ -123,6 +123,7 @@ export interface FormBuilderOptions {
 export interface FormBuilderReturn {
   state: {
     raw: Record<string, any>;
+    masked: Record<string, any>;
   };
   formState: FormState;
   setValue: (name: string, value: any) => void;

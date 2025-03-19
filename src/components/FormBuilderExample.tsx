@@ -295,13 +295,7 @@ const FormBuilderExample: React.FC = () => {
           </div>
           <div style={{ flex: 1 }}>
             <h3>Masked Values</h3>
-            <pre>{JSON.stringify({
-              ...state.raw,
-              phone: state.raw.phone ? applyMask(state.raw.phone, "(###) ###-####") : "",
-              ssn: state.raw.ssn ? applyMask(state.raw.ssn, "###-##-####") : "",
-              creditCard: state.raw.creditCard ? applyMask(state.raw.creditCard, "#### #### #### ####") : "",
-              date: state.raw.date ? applyMask(state.raw.date, "##/##/####") : "",
-            }, null, 2)}</pre>
+            <pre>{JSON.stringify(state.masked, null, 2)}</pre>
           </div>
         </div>
         
