@@ -62,6 +62,7 @@ const exampleFormConfig: FormConfig = {
           id: "email",
           type: "text",
           label: "Email Address",
+          required: true,
           validation: {
             pattern: "^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$",
             message: "Please enter a valid email address",
@@ -133,6 +134,7 @@ const exampleFormConfig: FormConfig = {
           id: "country",
           type: "select",
           label: "Country",
+          required: true,
           options: [
             { value: "us", label: "United States" },
             { value: "ca", label: "Canada" },
@@ -146,6 +148,7 @@ const exampleFormConfig: FormConfig = {
           id: "interests",
           type: "chip",
           label: "Interests",
+          required: true,
           options: [
             "Technology",
             "Sports",
