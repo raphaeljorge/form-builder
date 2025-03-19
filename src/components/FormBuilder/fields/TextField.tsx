@@ -14,8 +14,9 @@ const countValuePlaceholders = (mask: string): number => {
 
 /**
  * Apply mask to a string value
+ * @export
  */
-const applyMask = (value: string, mask: string): string => {
+export const applyMask = (value: string, mask: string): string => {
   if (!mask || !value) return value;
   
   // First, remove any non-alphanumeric characters from the value

@@ -3,6 +3,7 @@ import { FormBuilder, useFormBuilder } from "./FormBuilder";
 import type { FormConfig, WrapperProps } from "../types/form";
 import { useMutation } from "@tanstack/react-query";
 import "./FormBuilderExample.css";
+import { applyMask } from "../components/FormBuilder/fields/TextField";
 
 // Define custom wrapper components
 // Custom wrapper components
@@ -272,7 +273,22 @@ const FormBuilderExample: React.FC = () => {
       
       <div className="form-debug">
         <h2>Form State</h2>
-        <pre>{JSON.stringify(state.raw, null, 2)}</pre>
+        <div style={{ display: 'flex', gap: '2rem' }}>
+          <div style={{ flex: 1 }}>
+            <h3>Raw Values</h3>
+            <pre>{JSON.stringify(state.raw, null, 2)}</pre>
+          </div>
+          <div style={{ flex: 1 }}>
+            <h3>Masked Values</h3>
+            <pre>{JSON.stringify({
+              ...state.raw,
+              phone: state.raw.phone ? applyMask(state.raw.phone, "(###) ###-####") : "",
+              ssn: state.raw.ssn ? applyMask(state.raw.ssn, "###-##-####") : "",
+              creditCard: state.raw.creditCard ? applyMask(state.raw.creditCard, "#### #### #### ####") : "",
+              date: state.raw.date ? applyMask(state.raw.date, "##/##/####") : "",
+            }, null, 2)}</pre>
+          </div>
+        </div>
         
         <h2>Submission State</h2>
         <p>Status: {mutation.isPending ? "Submitting..." : mutation.isSuccess ? "Success" : "Idle"}</p>
