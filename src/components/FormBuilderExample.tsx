@@ -38,6 +38,19 @@ const ImportantFieldWrapper: React.FC<WrapperProps> = ({ children, id }) => (
   </div>
 );
 
+// Side by side wrapper for displaying fields in a row
+// biome-ignore lint/correctness/noUnusedVariables: Used in form config
+const SideBySideWrapper: React.FC<WrapperProps> = ({ children, id }) => (
+  <div className="side-by-side-wrapper" style={{
+    display: 'flex',
+    flexDirection: 'row',
+    gap: '1rem',
+    width: '100%'
+  }}>
+    {children}
+  </div>
+);
+
 
 // Example form configuration with wrapper references
 const exampleFormConfig: FormConfig = {
@@ -50,7 +63,7 @@ const exampleFormConfig: FormConfig = {
           type: "text",
           label: "Full Name",
           required: true,
-          wrapper: ImportantFieldWrapper, // Use the ImportantFieldWrapper directly
+          wrapper: ImportantFieldWrapper,
         },
         {
           id: "email",
@@ -92,6 +105,7 @@ const exampleFormConfig: FormConfig = {
     },
     {
       id: "moreMaskedFields",
+      wrapper: SideBySideWrapper, // Use the SideBySideWrapper to display fields side by side
       columns: [
         {
           id: "creditCard",
@@ -103,6 +117,7 @@ const exampleFormConfig: FormConfig = {
             pattern: "^\\d{16}$", // Validate 16 digits
             message: "Credit card must be 16 digits",
           },
+          wrapper: ImportantFieldWrapper,
         },
         {
           id: "date",
@@ -119,7 +134,7 @@ const exampleFormConfig: FormConfig = {
     },
     {
       id: "preferences",
-      wrapper: CustomColumnWrapper, // Use the CustomColumnWrapper directly
+      wrapper: SideBySideWrapper, // Use the SideBySideWrapper to display fields side by side
       columns: [
         {
           id: "country",

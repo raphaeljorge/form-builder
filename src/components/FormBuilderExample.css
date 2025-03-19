@@ -13,6 +13,21 @@
   margin-bottom: 1rem;
 }
 
+/* Side by side wrapper styles */
+.side-by-side-wrapper {
+  display: flex;
+  flex-direction: row;
+  gap: 1rem;
+  width: 100%;
+}
+
+/* Make the side by side wrapper responsive */
+@media (max-width: 768px) {
+  .side-by-side-wrapper {
+    flex-direction: column;
+  }
+}
+
 .form-example {
   max-width: 800px;
   margin: 0 auto;
