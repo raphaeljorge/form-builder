@@ -1,8 +1,8 @@
 import type {
-  TextColumnConfig,
-  SelectColumnConfig,
-  ChipColumnConfig,
-  ArrayColumnConfig,
+  TextFieldConfig,
+  SelectFieldConfig,
+  ChipFieldConfig,
+  ArrayFieldConfig,
 } from "../../../types/form";
 
 /**
@@ -17,7 +17,7 @@ export interface BaseFieldProps {
  * Text field props
  */
 export interface TextFieldProps extends BaseFieldProps {
-  field: TextColumnConfig;
+  field: TextFieldConfig;
   value: string;
   onChange: (value: string) => void;
 }
@@ -26,7 +26,7 @@ export interface TextFieldProps extends BaseFieldProps {
  * Select field props
  */
 export interface SelectFieldProps extends BaseFieldProps {
-  field: SelectColumnConfig;
+  field: SelectFieldConfig;
   value: string;
   onChange: (value: string) => void;
 }
@@ -35,7 +35,7 @@ export interface SelectFieldProps extends BaseFieldProps {
  * Chip field props
  */
 export interface ChipFieldProps extends BaseFieldProps {
-  field: ChipColumnConfig;
+  field: ChipFieldConfig;
   value: string[];
   onChange: (value: string[]) => void;
 }
@@ -44,7 +44,7 @@ export interface ChipFieldProps extends BaseFieldProps {
  * Array field props
  */
 export interface ArrayFieldProps extends BaseFieldProps {
-  field: ArrayColumnConfig;
+  field: ArrayFieldConfig;
   value: any[];
   onChange: (value: any[]) => void;
   arrayOperations: {

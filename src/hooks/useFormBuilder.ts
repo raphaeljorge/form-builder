@@ -5,7 +5,8 @@ import type {
   FormBuilderOptions,
   FormBuilderReturn,
   FormConfig,
-  ArrayColumnConfig,
+  ArrayFieldConfig,
+  FieldConfig,
   ColumnConfig,
   ValidationRule,
   TextColumnConfig,
@@ -30,13 +31,13 @@ const extractFieldsFromConfig = (config: FormConfig): Record<string, ColumnConfi
 /**
  * Find all array fields in the form config
  */
-const findArrayFieldsInConfig = (config: FormConfig): ArrayColumnConfig[] => {
-  const arrayFields: ArrayColumnConfig[] = [];
+const findArrayFieldsInConfig = (config: FormConfig): ColumnConfig[] => {
+  const arrayFields: ColumnConfig[] = [];
 
   for (const row of config.rows) {
     for (const column of row.columns) {
-      if (column.type === "array") {
-        arrayFields.push(column as ArrayColumnConfig);
+      if (column.type === "array" || (column.fieldConfig && column.fieldConfig.type === "array")) {
+        arrayFields.push(column);
       }
     }
   }
@@ -72,28 +73,30 @@ const createValidationRules = (
     }
 
     // Min/max items validation for chip fields
-    if (fieldConfig.type === "chip") {
-      if (fieldConfig.minItems) {
+    if (fieldConfig.type === "chip" || (fieldConfig.fieldConfig && fieldConfig.fieldConfig.type === "chip")) {
+      if (fieldConfig.minItems || fieldConfig.validation?.minItems) {
+        const minItems = fieldConfig.minItems || fieldConfig.validation?.minItems || 0;
         rule.validate = {
           ...rule.validate,
           minItems: (value: any[]) => {
             return (
               !value ||
-              value.length >= (fieldConfig.minItems || 0) ||
-              `Minimum ${fieldConfig.minItems} items required`
+              value.length >= minItems ||
+              `Minimum ${minItems} items required`
             );
           },
         };
       }
 
-      if (fieldConfig.maxItems) {
+      if (fieldConfig.maxItems || fieldConfig.validation?.maxItems) {
+        const maxItems = fieldConfig.maxItems || fieldConfig.validation?.maxItems || Number.POSITIVE_INFINITY;
         rule.validate = {
           ...rule.validate,
           maxItems: (value: any[]) => {
             return (
               !value ||
-              value.length <= (fieldConfig.maxItems || Number.POSITIVE_INFINITY) ||
-              `Maximum ${fieldConfig.maxItems} items allowed`
+              value.length <= maxItems ||
+              `Maximum ${maxItems} items allowed`
             );
           },
         };
@@ -104,7 +107,17 @@ const createValidationRules = (
     if (fieldConfig.validation?.custom) {
       rule.validate = {
         ...rule.validate,
-        custom: fieldConfig.validation.custom,
+        custom: typeof fieldConfig.validation.custom === 'function' 
+          ? fieldConfig.validation.custom 
+          : fieldConfig.validation.custom.validator,
+      };
+    }
+
+    // Async validation
+    if (fieldConfig.validation?.async) {
+      rule.validate = {
+        ...rule.validate,
+        async: fieldConfig.validation.async.validator,
       };
     }
 
@@ -142,7 +155,8 @@ const initializeDefaultValues = (
         defaultValues[fieldId] = fieldConfig.defaultValue;
       } else {
         // Set appropriate default values based on field type
-        switch (fieldConfig.type) {
+        const fieldType = fieldConfig.type || fieldConfig.fieldConfig?.type;
+        switch (fieldType) {
           case "text":
             defaultValues[fieldId] = "";
             break;
@@ -193,9 +207,11 @@ export const useFormBuilder = (
     formState,
     trigger,
     register,
+    setError: setFieldError,
+    clearErrors: clearFieldErrors,
   } = useForm({
     defaultValues,
-    mode: options.mode || "onSubmit",
+    mode: options.mode || options.validationBehavior || "onSubmit",
   });
 
   // Register all fields with validation rules
@@ -211,38 +227,49 @@ export const useFormBuilder = (
     const arrayFieldConfigs = findArrayFieldsInConfig(config);
 
     for (const fieldConfig of arrayFieldConfigs) {
-      operations[fieldConfig.id] = {
+      const fieldId = fieldConfig.id;
+      operations[fieldId] = {
         add: (value: any) => {
-          const currentValues = getValues(fieldConfig.id) || [];
-          setValue(fieldConfig.id, [...currentValues, value], {
+          const currentValues = getValues(fieldId) || [];
+          setValue(fieldId, [...currentValues, value], {
             shouldDirty: true,
             shouldValidate: true,
           });
         },
         remove: (index: number) => {
-          const currentValues = getValues(fieldConfig.id) || [];
+          const currentValues = getValues(fieldId) || [];
           setValue(
-            fieldConfig.id,
+            fieldId,
             currentValues.filter((_: any, i: number) => i !== index),
             { shouldDirty: true, shouldValidate: true }
           );
         },
         move: (from: number, to: number) => {
-          const currentValues = getValues(fieldConfig.id) || [];
+          const currentValues = getValues(fieldId) || [];
           const newValues = [...currentValues];
           const [movedItem] = newValues.splice(from, 1);
           newValues.splice(to, 0, movedItem);
-          setValue(fieldConfig.id, newValues, {
+          setValue(fieldId, newValues, {
             shouldDirty: true,
             shouldValidate: true,
           });
         },
-        // Add update method for updating a specific item in the array
         update: (index: number, value: any) => {
-          const currentValues = getValues(fieldConfig.id) || [];
+          const currentValues = getValues(fieldId) || [];
           const newValues = [...currentValues];
           newValues[index] = value;
-          setValue(fieldConfig.id, newValues, {
+          setValue(fieldId, newValues, {
+            shouldDirty: true,
+            shouldValidate: true,
+          });
+        },
+        swap: (indexA: number, indexB: number) => {
+          const currentValues = getValues(fieldId) || [];
+          const newValues = [...currentValues];
+          const temp = newValues[indexA];
+          newValues[indexA] = newValues[indexB];
+          newValues[indexB] = temp;
+          setValue(fieldId, newValues, {
             shouldDirty: true,
             shouldValidate: true,
           });
@@ -261,10 +288,11 @@ export const useFormBuilder = (
       }
       
       return rhfHandleSubmit(async (data) => {
+        const transformedData = options.transform ? options.transform(data) : data;
         if (callback) {
-          await callback(data);
+          await callback(transformedData);
         } else if (options.onSubmit) {
-          await options.onSubmit(data);
+          await options.onSubmit(transformedData);
         }
       })(e as any);
     };
@@ -284,14 +312,14 @@ export const useFormBuilder = (
   };
 
   // Generate masked values for fields with masks
-  const getMaskedValues = () => {
+  const getMaskedValues = (): Record<string, any> => {
     const values = getValues();
     const maskedValues: Record<string, any> = { ...values };
     
     // Apply masks to fields that have them
     for (const [fieldId, fieldConfig] of Object.entries(fields)) {
-      if (fieldConfig.type === "text" && (fieldConfig as TextColumnConfig).mask) {
-        const mask = (fieldConfig as TextColumnConfig).mask;
+      const mask = fieldConfig.mask || (fieldConfig.fieldConfig as TextColumnConfig)?.mask;
+      if ((fieldConfig.type === "text" || fieldConfig.fieldConfig?.type === "text") && mask) {
         const rawValue = values[fieldId];
         
         if (mask && rawValue) {
@@ -303,20 +331,39 @@ export const useFormBuilder = (
     return maskedValues;
   };
 
+  // Convert form errors to a simple record
+  const getErrorsRecord = (): Record<string, string> => {
+    const errors: Record<string, string> = {};
+    
+    // Convert errors to a simple format
+    for (const [key, error] of Object.entries(formState.errors)) {
+      if (error) {
+        errors[key] = typeof error === 'object' && error !== null && 'message' in error
+          ? String(error.message)
+          : String(error);
+      }
+    }
+    
+    return errors;
+  };
+
   // Return unified API
   return {
     state: {
-      raw: getValues(),
-      masked: getMaskedValues(),
-    },
-    formState: {
-      raw: getValues(),
-      isDirty: formState.isDirty,
       isValid: formState.isValid,
+      isDirty: formState.isDirty,
+      errors: getErrorsRecord(),
       isSubmitted: formState.isSubmitted,
       isSubmitting: formState.isSubmitting,
+      isValidating: false, // React Hook Form doesn't have this property
       isSubmitSuccessful: formState.isSubmitSuccessful,
-      // Convert errors to expected format
+      touchedFields: formState.touchedFields as Record<string, boolean>,
+      dirtyFields: formState.dirtyFields as Record<string, boolean>,
+      raw: getValues(),
+    },
+    formState: {
+      isValid: formState.isValid,
+      isDirty: formState.isDirty,
       errors: Object.entries(formState.errors).reduce((acc, [key, error]) => {
         if (error) {
           acc[key] = {
@@ -327,24 +374,36 @@ export const useFormBuilder = (
         }
         return acc;
       }, {} as Record<string, { message: string }>),
+      isSubmitted: formState.isSubmitted,
+      isSubmitting: formState.isSubmitting,
+      isSubmitSuccessful: formState.isSubmitSuccessful,
       dirtyFields: formState.dirtyFields as Record<string, boolean>,
       touchedFields: formState.touchedFields as Record<string, boolean>,
+      raw: getValues(),
     },
+    values: getValues(),
     setValue: (name: string, value: any) => {
-      // Use react-hook-form's setValue with options to trigger validation and mark as dirty
       setValue(name, value, {
         shouldDirty: true,
         shouldTouch: true,
         shouldValidate: true
       });
-      
-      // Update the masked values when a field value changes
-      // This is handled automatically by getMaskedValues() when state.masked is accessed
     },
     getValue: (name: string) => getValues(name),
+    reset: resetForm,
     resetForm,
-    validateField,
-    handleSubmit,
     arrayFields,
+    handleSubmit,
+    validate: async () => {
+      try {
+        const result = await trigger();
+        return result;
+      } catch (_error) {
+        return false;
+      }
+    },
+    validateField,
+    clearErrors: () => clearFieldErrors(),
+    setError: (name: string, error: string) => setFieldError(name, { message: error }),
   };
 };

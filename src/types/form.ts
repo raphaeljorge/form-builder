@@ -1,89 +1,140 @@
 import type { ReactNode } from "react";
 
 /**
- * Form field option for select and chip fields
- */
-export type FieldOption = string | { value: string; label: string };
-
-/**
- * Validation rules for form fields
+ * Common validation rules for form fields
  */
 export interface ValidationRule {
+  required?: { value: boolean; message: string };
   pattern?: string;
   message?: string;
+  min?: { value: number; message: string };
+  max?: { value: number; message: string };
+  minLength?: { value: number; message: string };
+  maxLength?: { value: number; message: string };
+  validate?: "email" | "number" | string;
+  custom?: {
+    validator: (value: any, formValues?: Record<string, any>) => boolean | string;
+  };
+  async?: {
+    validator: (value: any) => Promise<boolean | string>;
+    debounce?: number;
+  };
+  dependencies?: string[];
   minItems?: number;
   maxItems?: number;
-  custom?: (value: any, formValues: Record<string, any>) => boolean | string;
 }
 
 /**
- * Base column configuration
+ * Option for select and chip fields
  */
-export interface BaseColumnConfig {
+export interface FieldOption {
+  value: string;
+  label: string;
+}
+
+/**
+ * Field option type that can be either a string or an object
+ */
+export type FieldOptionType = string | FieldOption;
+
+/**
+ * Base field configuration properties
+ */
+export interface BaseFieldConfig {
   id: string;
-  type: "text" | "select" | "chip" | "array";
-  wrapperProps?: Record<string, any>;
-  wrapper?: React.ComponentType<WrapperProps>; // Direct reference to a wrapper component
+  type: "text" | "select" | "array" | "chip";
   label?: string;
   placeholder?: string;
   required?: boolean;
   validation?: ValidationRule;
-  defaultValue?: any;
-}
-
-/**
- * Text field column configuration
- */
-export interface TextColumnConfig extends BaseColumnConfig {
-  type: "text";
   mask?: string;
+  defaultValue?: any;
+  showSkeleton?: boolean;
+  wrapperProps?: Record<string, any>;
+  wrapper?: React.ComponentType<WrapperProps>;
 }
 
 /**
- * Select field column configuration
+ * Text field configuration
  */
-export interface SelectColumnConfig extends BaseColumnConfig {
+export interface TextFieldConfig extends BaseFieldConfig {
+  type: "text";
+}
+
+/**
+ * Select field configuration
+ */
+export interface SelectFieldConfig extends BaseFieldConfig {
   type: "select";
-  options: FieldOption[];
+  options: FieldOptionType[];
 }
 
 /**
- * Chip field column configuration
+ * Chip field configuration
  */
-export interface ChipColumnConfig extends BaseColumnConfig {
+export interface ChipFieldConfig extends BaseFieldConfig {
   type: "chip";
-  options: FieldOption[];
+  options: FieldOptionType[];
   minItems?: number;
   maxItems?: number;
 }
 
 /**
- * Array field column configuration
+ * Array field configuration
  */
-export interface ArrayColumnConfig extends BaseColumnConfig {
+export interface ArrayFieldConfig extends BaseFieldConfig {
   type: "array";
-  template: Omit<BaseColumnConfig, "id">;
+  template: Omit<BaseFieldConfig, "id">;
   minItems?: number;
   maxItems?: number;
 }
 
 /**
- * Union type for all column configurations
+ * Union type for all field configurations
  */
-export type ColumnConfig = 
-  | TextColumnConfig 
-  | SelectColumnConfig 
-  | ChipColumnConfig 
-  | ArrayColumnConfig;
+export type FieldConfig = 
+  | TextFieldConfig 
+  | SelectFieldConfig 
+  | ChipFieldConfig 
+  | ArrayFieldConfig;
+
+/**
+ * Column configuration
+ */
+export interface ColumnConfig {
+  id: string;
+  wrapperProps?: Record<string, any>;
+  fieldConfig?: FieldConfig;
+  type?: "text" | "select" | "array" | "chip";
+  label?: string;
+  placeholder?: string;
+  required?: boolean;
+  validation?: ValidationRule;
+  mask?: string;
+  defaultValue?: any;
+  options?: FieldOptionType[];
+  minItems?: number;
+  maxItems?: number;
+  template?: Omit<BaseFieldConfig, "id">;
+  wrapper?: React.ComponentType<WrapperProps>;
+}
+
+/**
+ * Aliases for backward compatibility
+ */
+export type TextColumnConfig = TextFieldConfig;
+export type SelectColumnConfig = SelectFieldConfig;
+export type ChipColumnConfig = ChipFieldConfig;
+export type ArrayColumnConfig = ArrayFieldConfig;
 
 /**
  * Row configuration
  */
 export interface RowConfig {
   id: string;
-  columns: ColumnConfig[];
   wrapperProps?: Record<string, any>;
-  wrapper?: React.ComponentType<WrapperProps>; // Direct reference to a wrapper component
+  columns: ColumnConfig[];
+  wrapper?: React.ComponentType<WrapperProps>;
 }
 
 /**
@@ -94,51 +145,72 @@ export interface FormConfig {
 }
 
 /**
- * Form state
- */
-export interface FormState {
-  raw: Record<string, any>;
-  isDirty: boolean;
-  isValid: boolean;
-  isSubmitted: boolean;
-  isSubmitting: boolean;
-  isSubmitSuccessful: boolean;
-  errors: Record<string, { message: string }>;
-  dirtyFields: Record<string, boolean>;
-  touchedFields: Record<string, boolean>;
-}
-
-/**
  * Form builder hook options
  */
 export interface FormBuilderOptions {
   defaultValues?: Record<string, any>;
   onSubmit?: (data: Record<string, any>) => void | Promise<void>;
+  validationBehavior?: "onChange" | "onBlur" | "onSubmit";
   mode?: "onChange" | "onBlur" | "onSubmit";
+  transform?: (values: Record<string, any>) => Record<string, any>;
+}
+
+/**
+ * Form builder component props
+ */
+export interface FormBuilderProps {
+  config: FormConfig;
+  isLoading?: boolean;
+  children?: ReactNode;
+  form?: FormBuilderReturn;
+  RowWrapper?: React.ComponentType<WrapperProps>;
+  ColumnWrapper?: React.ComponentType<WrapperProps>;
+}
+
+/**
+ * Array field operations
+ */
+export interface ArrayFieldOperations {
+  add: (value: any) => void;
+  remove: (index: number) => void;
+  move: (from: number, to: number) => void;
+  update: (index: number, value: any) => void;
+  swap?: (indexA: number, indexB: number) => void;
+}
+
+/**
+ * Form state
+ */
+export interface FormState {
+  isValid: boolean;
+  isDirty: boolean;
+  errors: Record<string, string | { message: string }>;
+  isSubmitted: boolean;
+  isSubmitting: boolean;
+  isValidating?: boolean;
+  isSubmitSuccessful?: boolean;
+  touchedFields: Record<string, boolean>;
+  dirtyFields: Record<string, boolean>;
+  raw?: Record<string, any>;
 }
 
 /**
  * Form builder hook return type
  */
 export interface FormBuilderReturn {
-  state: {
-    raw: Record<string, any>;
-    masked: Record<string, any>;
-  };
-  formState: FormState;
+  state: FormState;
+  values: Record<string, any>;
+  formState?: FormState;
   setValue: (name: string, value: any) => void;
   getValue: (name: string) => any;
-  resetForm: () => void;
-  validateField: (name: string, value?: any) => Promise<boolean>;
+  reset?: () => void;
+  resetForm?: () => void;
+  arrayFields: Record<string, ArrayFieldOperations>;
   handleSubmit: (callback?: (data: Record<string, any>) => void | Promise<void>) => (e?: React.FormEvent) => void;
-  arrayFields: {
-    [key: string]: {
-      add: (value: any) => void;
-      remove: (index: number) => void;
-      move: (from: number, to: number) => void;
-      update: (index: number, value: any) => void;
-    };
-  };
+  validate?: () => Promise<boolean>;
+  validateField?: (name: string, value?: any) => Promise<boolean>;
+  clearErrors?: () => void;
+  setError?: (name: string, error: string) => void;
 }
 
 /**
@@ -148,15 +220,4 @@ export interface WrapperProps {
   children: ReactNode;
   id: string;
   [key: string]: any;
-}
-
-/**
- * Form builder component props
- */
-export interface FormBuilderProps {
-  config: FormConfig;
-  isLoading?: boolean;
-  form?: FormBuilderReturn;
-  RowWrapper?: React.ComponentType<WrapperProps>;
-  ColumnWrapper?: React.ComponentType<WrapperProps>;
 }
